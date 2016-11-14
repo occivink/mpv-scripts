@@ -70,12 +70,12 @@ function set_active()
         end
     end
     for i = 0, 9 do
-        mp.add_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) end)
+        mp.add_forced_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) end)
     end
-    mp.add_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) end)
-    mp.add_key_binding("RIGHT", "seek-to-RIGHT", function() shift_cursor(false) end)
-    mp.add_key_binding("ESC", "seek-to-ESC", set_inactive)
-    mp.add_key_binding("ENTER", "seek-to-ENTER", seek_to)
+    mp.add_forced_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) end)
+    mp.add_forced_key_binding("RIGHT", "seek-to-RIGHT", function() shift_cursor(false) end)
+    mp.add_forced_key_binding("ESC", "seek-to-ESC", set_inactive)
+    mp.add_forced_key_binding("ENTER", "seek-to-ENTER", seek_to)
     show_seeker()
     active = true
 end
