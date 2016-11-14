@@ -16,7 +16,7 @@ function click_handler(table)
         iH = mp.get_property("height")
         vpX = mp.get_property("video-pan-x")
         vpY = mp.get_property("video-pan-y")
-        mp.add_key_binding("mouse_move", "drag-to-pan", function () needs_adjusting = true end)
+        mp.add_forced_key_binding("mouse_move", "drag-to-pan", function () needs_adjusting = true end)
     elseif table["event"] == "up" then
         mp.remove_key_binding("drag-to-pan")
         needs_adjusting = false
