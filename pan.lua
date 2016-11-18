@@ -1,4 +1,4 @@
-needs_adjusting = false
+local needs_adjusting = false
 
 function adjust_pan()
     if needs_adjusting then
@@ -11,6 +11,7 @@ end
 
 function click_handler(table)
     if table["event"] == "down" then
+        if not mp.get_property("filename") then return end
         oX, oY = mp.get_mouse_pos()
         iW = mp.get_property("width")
         iH = mp.get_property("height")

@@ -61,12 +61,15 @@ function seek_to()
 end
 
 function set_active()
+    if not mp.get_property("seekable") then return end
     -- find duration of the video and set cursor position accordingly
     local duration = mp.get_property_number("duration")
-    for i = 1, 9 do
-        if duration > time_scale[i] then
-            cursor_position = i
-            break
+    if duration ~= nil then
+        for i = 1, 9 do
+            if duration > time_scale[i] then
+                cursor_position = i
+                break
+            end
         end
     end
     for i = 0, 9 do
