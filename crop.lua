@@ -118,6 +118,7 @@ function update_crop_zone_state()
 end
 
 function start_crop()
+    if not mp.get_property("filename") then return end
     needs_drawing = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)
     mp.add_forced_key_binding("MOUSE_BTN0", "crop-mouse-click", update_crop_zone_state)
