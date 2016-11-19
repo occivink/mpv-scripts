@@ -41,7 +41,6 @@ function shift_cursor(left)
     else
         cursor_position = math.min(cursor_position + 1, 9)
     end
-    show_seeker()
 end
 
 function current_time_as_sec()
@@ -57,7 +56,13 @@ function seek_to()
     for i = 1, 9 do
         current_time[i] = 0
     end
-    set_inactive()
+end
+
+function backspace()
+    if cursor_position ~= 9 or current_time[9] == 0 then
+        shift_cursor(true)
+    end
+    current_time[cursor_position] = 0
 end
 
 function set_active()
@@ -73,12 +78,13 @@ function set_active()
         end
     end
     for i = 0, 9 do
-        mp.add_forced_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) end)
+        mp.add_forced_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) show_seeker() end)
     end
-    mp.add_forced_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) end)
-    mp.add_forced_key_binding("RIGHT", "seek-to-RIGHT", function() shift_cursor(false) end)
+    mp.add_forced_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) show_seeker() end)
+    mp.add_forced_key_binding("RIGHT", "seek-to-RIGHT", function() shift_cursor(false) show_seeker() end)
+    mp.add_forced_key_binding("BS", "seek-to-BACKSPACE", function() backspace() show_seeker() end)
     mp.add_forced_key_binding("ESC", "seek-to-ESC", set_inactive)
-    mp.add_forced_key_binding("ENTER", "seek-to-ENTER", seek_to)
+    mp.add_forced_key_binding("ENTER", "seek-to-ENTER", function() seek_to() set_inactive() end)
     show_seeker()
     active = true
 end
@@ -91,6 +97,7 @@ function set_inactive()
     end
     mp.remove_key_binding("seek-to-LEFT")
     mp.remove_key_binding("seek-to-RIGHT")
+    mp.remove_key_binding("seek-to-BACKSPACE")
     mp.remove_key_binding("seek-to-ESC")
     mp.remove_key_binding("seek-to-ENTER")
     active = false
