@@ -7,8 +7,16 @@ end
 local cursor_position = 1
 local time_scale = {60*60*10, 60*60, 60*10, 60, 10, 1, 0.1, 0.01, 0.001}
 
+local ass_begin = mp.get_property("osd-ass-cc/0")
+local ass_end = mp.get_property("osd-ass-cc/1")
+
+-- timer to redraw periodically the message
+-- to avoid leaving bindings when the seeker disappears for whatever reason
+-- pretty hacky tbh
+local timer = nil
+local timer_duration = 3
+
 function show_seeker()
-    local ass = assdraw.ass_new()
     local prepend_char = { '', '', ':', '', ':', '', '.', '', ''}
     local str = ''
     for i = 1, 9 do
@@ -19,11 +27,7 @@ function show_seeker()
             str = str .. current_time[i]
         end
     end
-    ass:new_event()
-    ass:pos(20,20)
-    ass:append("Seek to: "..str)
-    local sX, sY = mp.get_osd_size()
-    mp.set_osd_ass(sX, sY, ass.text)
+    mp.osd_message("Seek to: " .. ass_begin .. str .. ass_end, timer_duration)
 end
 
 function change_number(i)
@@ -86,12 +90,13 @@ function set_active()
     mp.add_forced_key_binding("ESC", "seek-to-ESC", set_inactive)
     mp.add_forced_key_binding("ENTER", "seek-to-ENTER", function() seek_to() set_inactive() end)
     show_seeker()
+    timer = mp.add_periodic_timer(timer_duration, show_seeker)
     active = true
 end
 
 function set_inactive()
     local sX, sY = mp.get_osd_size()
-    mp.set_osd_ass(sX, sY, '')
+    mp.osd_message("")
     for i = 0, 9 do
         mp.remove_key_binding("seek-to-"..i)
     end
@@ -100,6 +105,7 @@ function set_inactive()
     mp.remove_key_binding("seek-to-BACKSPACE")
     mp.remove_key_binding("seek-to-ESC")
     mp.remove_key_binding("seek-to-ENTER")
+    timer:kill()
     active = false
 end
 
