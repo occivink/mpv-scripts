@@ -2,6 +2,7 @@ local assdraw = require 'mp.assdraw'
 local needs_drawing = false
 local crop_first_corner = nil -- in video space
 local video_dimensions = {}
+local crop_history = {}
 
 function compute_video_dimensions()
     -- this function is very much ripped from video/out/aspect.c in mpv's source
@@ -209,11 +210,13 @@ function crop_video(x, y, w, h)
     -- modify existing crop if found
     local crop_index = #vf_table + 1
     for i = 1, #vf_table do
-        filter = vf_table[i]
+        local filter = vf_table[i]
         if filter["name"] == "crop" then
             crop_index = i
-            x = x + filter["params"]["x"]
-            y = y + filter["params"]["y"]
+            local params = filter["params"];
+            x = x + params["x"]
+            y = y + params["y"]
+            crop_history[#crop_history + 1] = params;
             break
         end
     end
@@ -287,7 +290,13 @@ function undo_crop()
     local vf_table = mp.get_property_native("vf")
     for i = 1, #vf_table do
         if vf_table[i]["name"] == "crop" then
-            vf_table[i] = nil
+            local last_crop = crop_history[#crop_history]
+            if last_crop == nil then
+                vf_table[i] = nil
+            else
+                vf_table[i]["params"] = last_crop
+                crop_history[#crop_history] = nil
+            end
             mp.set_property_native("vf", vf_table)
             break
         end
