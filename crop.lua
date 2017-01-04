@@ -264,7 +264,9 @@ function start_crop()
         "video-align-x",
         "video-pan-x",
         "video-align-y",
-        "video-pan-y"
+        "video-pan-y",
+        "osd-width",
+        "osd-height",
     }
     for i = 1, #properties do
         mp.observe_property(properties[i], "native", reset_crop)
