@@ -3,7 +3,7 @@
 Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and handles additionnal properties (pan, zoom), there are other subtleties.
 
 Press `c` to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
-Press `alt-c` to undo the current crop.
+You can use a binding such as `f vf del -1` to undo the last crop.
 
 # drag-to-pan.lua
 
