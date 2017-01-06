@@ -1,9 +1,14 @@
 local assdraw = require 'mp.assdraw'
 local needs_drawing = false
+local dimensions_changed = false
 local crop_first_corner = nil -- in video space
-local video_dimensions = {}
 
-function compute_video_dimensions()
+function get_video_dimensions()
+    if not dimensions_changed then
+        return video_dimensions
+    end
+    video_dimensions = {}
+    dimensions_changed = false
     -- this function is very much ripped from video/out/aspect.c in mpv's source
     local keep_aspect = mp.get_property_bool("keepaspect")
     local video_params = mp.get_property_native("video-out-params")
@@ -80,6 +85,7 @@ function compute_video_dimensions()
     end
     video_dimensions.rw = w / (video_dimensions.x2 - video_dimensions.x1)
     video_dimensions.rh = h / (video_dimensions.y2 - video_dimensions.y1)
+    return video_dimensions
 end
 
 function sort_corners(c1, c2)
@@ -160,7 +166,7 @@ function draw_crosshair(ass, center, window_size)
     ass:draw_stop()
 end
 
-function draw_position_text(ass, position, window_size, offset)
+function draw_position_text(ass, position, window_size, video, offset)
     ass:new_event()
     local align = 1
     local ofx = 1
@@ -177,27 +183,28 @@ function draw_position_text(ass, position, window_size, offset)
     ass:append('{\\fs26}')
     ass:append('{\\bord1.5}')
     ass:pos(ofx*offset + position.x, ofy*offset + position.y)
-    video_position = screen_to_video(position, video_dimensions)
+    video_position = screen_to_video(position, video)
     ass:append(video_position.x .. ', ' .. video_position.y)
 end
 
 function draw_crop_zone()
     if needs_drawing then
         local cursor_pos = {}
+        local dim = get_video_dimensions()
         cursor_pos.x, cursor_pos.y = mp.get_mouse_pos()
-        cursor_pos = clamp_to_screen(cursor_pos, video_dimensions)
+        cursor_pos = clamp_to_screen(cursor_pos, dim)
         local ass = assdraw.ass_new()
 
         if crop_first_corner ~= nil then
-            local first_corner = video_to_screen(crop_first_corner, video_dimensions)
+            local first_corner = video_to_screen(crop_first_corner, dim)
             local c1, c2 = sort_corners(first_corner, cursor_pos)
-            draw_shade(ass, c1, c2, video_dimensions)
+            draw_shade(ass, c1, c2, dim)
         end
 
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
         draw_crosshair(ass, cursor_pos, window_size)
-        draw_position_text(ass, cursor_pos, window_size, 6)
+        draw_position_text(ass, cursor_pos, window_size, dim, 6)
 
         mp.set_osd_ass(window_size.w, window_size.h, ass.text)
         needs_drawing = false
@@ -220,9 +227,10 @@ end
 
 function update_crop_zone_state()
     local second_corner = {}
+    local dim = get_video_dimensions()
     second_corner.x, second_corner.y = mp.get_mouse_pos()
-    second_corner = clamp_to_screen(second_corner, video_dimensions)
-    second_corner = screen_to_video(second_corner, video_dimensions)
+    second_corner = clamp_to_screen(second_corner, dim)
+    second_corner = screen_to_video(second_corner, dim)
     if crop_first_corner == nil then
         crop_first_corner = second_corner
     else
@@ -233,14 +241,14 @@ function update_crop_zone_state()
 end
 
 function reset_crop()
-    compute_video_dimensions()
+    dimensions_changed = true
     needs_drawing = true
 end
 
 function start_crop()
     if not mp.get_property("filename") then return end
     needs_drawing = true
-    compute_video_dimensions()
+    dimensions_changed = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)
     mp.add_forced_key_binding("MOUSE_BTN0", "crop-mouse-click", update_crop_zone_state)
     mp.add_forced_key_binding("ESC", "crop-esc", cancel_crop)
