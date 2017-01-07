@@ -85,7 +85,7 @@ function start_ffmpeg(args)
     end
 end
 
-function start_encoding(from, to)
+function start_encoding(from, to, settings)
     local input = mp.get_property("path")
     local filename = mp.get_property("filename/no-ext")
     local args = {
@@ -97,24 +97,30 @@ function start_encoding(from, to)
     }
     
     -- map currently playing channels
-    local tracks = get_active_tracks()
-    for i = 1, #tracks do
+    if settings.only_active_tracks == "true" then
+        local tracks = get_active_tracks()
         args = append_table(args, { "-map", tracks[i] })
     end
 
     -- apply some of the video filters currently in the chain
-    local video_filters = get_video_filters_string()
-    if video_filters ~= "" then
-        args = append_table(args, {
-            "-filter:v", video_filters,
-        })
+    if settings.preserve_filters == "true" then
+        local video_filters = get_video_filters_string()
+        if video_filters ~= "" then
+            args = append_table(args, {
+                "-filter:v", video_filters,
+            })
+        end
     end
-    
-    args[#args + 1] = get_unused_filename(filename, ".webm")
+
+    for token in string.gmatch(settings.codec, "[^%s]+") do
+        args[#args + 1] = token
+    end
+
+    args[#args + 1] = get_unused_filename(filename, "." .. settings.container)
     mp.add_timeout(0, function() start_ffmpeg(args) end)
 end
 
-function set_timestamp()
+function set_timestamp(container, only_active_tracks, preserve_filters, codec)
     if start_timestamp == nil then
         mp.osd_message("Start timestamp set")
         start_timestamp = mp.get_property_number("time-pos")
@@ -125,11 +131,16 @@ function set_timestamp()
             return
         end
         mp.osd_message("End timestamp set, encoding...")
-        start_encoding(start_timestamp, current_timestamp)
+        local settings = {
+            container = container,
+            only_active_tracks = only_active_tracks,
+            preserve_filters = preserve_filters,
+            codec = codec
+        }
+        start_encoding(start_timestamp, current_timestamp, settings)
         start_timestamp = nil
     end
 end
 
-mp.add_key_binding("e", "set_timestamp", set_timestamp)
-mp.add_key_binding("alt+e", "clear_timestamp", function() start_timestamp = nil end)
-
+mp.add_key_binding(nil, "set_timestamp", set_timestamp)
+mp.add_key_binding(nil, "clear_timestamp", function() start_timestamp = nil end)
