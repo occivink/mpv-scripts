@@ -22,3 +22,6 @@ Toggle with `ctrl+t`. Move the current cursor position with `left`, `right`. Cha
 
 I may add history in the future.
 
+# filters.lua
+
+Some not-very-useful helper commands for handling filters and what not.
