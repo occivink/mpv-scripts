@@ -1,9 +1,19 @@
 # crop.lua
 
-Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and handles additionnal properties (pan, zoom), there are other subtleties.
+Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and handles additional properties (pan, zoom), there are other subtleties.
 
-Press `c` to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
+Press `c` to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.
 You can use a binding such as `f vf del -1` to undo the last crop.
+
+# encode.lua
+
+Make an extract of the currently playing video using `ffmpeg`. Press `e` once to set the beginning of the extract. Press `e` again to set the end and start encoding.
+
+Preserves some of the currently applied filters (crop, rotate, flip and mirror) into the extract. This is pretty useful combined with crop.lua.
+
+Only encodes currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.
+
+Not yet configurable.
 
 # drag-to-pan.lua
 
