@@ -5,9 +5,9 @@ local crop_first_corner = nil -- in video space
 
 function get_video_dimensions()
     if not dimensions_changed then
-        return video_dimensions
+        return _video_dimensions
     end
-    video_dimensions = {}
+    _video_dimensions = {}
     dimensions_changed = false
     -- this function is very much ripped from video/out/aspect.c in mpv's source
     local keep_aspect = mp.get_property_bool("keepaspect")
@@ -72,20 +72,20 @@ function get_video_dimensions()
 
         local align_x = mp.get_property_number("video-align-x")
         local pan_x = mp.get_property_number("video-pan-x")
-        video_dimensions.x1, video_dimensions.x2 = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
+        _video_dimensions.x1, _video_dimensions.x2 = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
 
         local align_y = mp.get_property_number("video-align-y")
         local pan_y = mp.get_property_number("video-pan-y")
-        video_dimensions.y1, video_dimensions.y2 = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
+        _video_dimensions.y1, _video_dimensions.y2 = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
     else
-        video_dimensions.x1 = 0
-        video_dimensions.x2 = window_w
-        video_dimensions.y1 = 0
-        video_dimensions.y2 = window_h
+        _video_dimensions.x1 = 0
+        _video_dimensions.x2 = window_w
+        _video_dimensions.y1 = 0
+        _video_dimensions.y2 = window_h
     end
-    video_dimensions.rw = w / (video_dimensions.x2 - video_dimensions.x1)
-    video_dimensions.rh = h / (video_dimensions.y2 - video_dimensions.y1)
-    return video_dimensions
+    _video_dimensions.rw = w / (_video_dimensions.x2 - _video_dimensions.x1)
+    _video_dimensions.rh = h / (_video_dimensions.y2 - _video_dimensions.y1)
+    return _video_dimensions
 end
 
 function sort_corners(c1, c2)
@@ -105,28 +105,28 @@ function clamp(low, value, high)
     end
 end
 
-function clamp_to_screen(point, video)
-    local ret = {}
-    ret.x = clamp(video.x1, point.x, video.x2)
-    ret.y = clamp(video.y1, point.y, video.y2)
-    return ret
+function clamp_to_screen(point, video_dim)
+    return {
+        x = clamp(video_dim.x1, point.x, video_dim.x2),
+        y = clamp(video_dim.y1, point.y, video_dim.y2)
+    }
 end
 
-function screen_to_video(point, video)
-    local res = {}
-    res.x = math.floor(video.rw * (point.x - video.x1) + 0.5)
-    res.y = math.floor(video.rh * (point.y - video.y1) + 0.5)
-    return res
+function screen_to_video(point, video_dim)
+    return {
+        x = math.floor(video_dim.rw * (point.x - video_dim.x1) + 0.5),
+        y = math.floor(video_dim.rh * (point.y - video_dim.y1) + 0.5)
+    }
 end
 
-function video_to_screen(point, video)
-    local res = {}
-    res.x = math.floor(point.x / video.rw + video.x1 + 0.5)
-    res.y = math.floor(point.y / video.rh + video.y1 + 0.5)
-    return res
+function video_to_screen(point, video_dim)
+    return {
+        x = math.floor(point.x / video_dim.rw + video_dim.x1 + 0.5),
+        y = math.floor(point.y / video_dim.rh + video_dim.y1 + 0.5)
+    }
 end
 
-function draw_shade(ass, top_left_corner, bottom_right_corner, video)
+function draw_shade(ass, top_left_corner, bottom_right_corner, video_dim)
     ass:new_event()
     ass:pos(0, 0)
     ass:append('{\\bord0}')
@@ -134,7 +134,7 @@ function draw_shade(ass, top_left_corner, bottom_right_corner, video)
     ass:append('{\\c&H000000&}')
     ass:append('{\\alpha&H77}')
     local c1, c2 = top_left_corner, bottom_right_corner
-    local v = video
+    local v = video_dim
     --   v.x1   c1.x   c2.x  v.x2
     -- v.y1+-----+------------+
     --     |     |     ur     |
@@ -166,7 +166,7 @@ function draw_crosshair(ass, center, window_size)
     ass:draw_stop()
 end
 
-function draw_position_text(ass, position, window_size, video, offset)
+function draw_position_text(ass, text, position, window_size, offset)
     ass:new_event()
     local align = 1
     local ofx = 1
@@ -183,28 +183,36 @@ function draw_position_text(ass, position, window_size, video, offset)
     ass:append('{\\fs26}')
     ass:append('{\\bord1.5}')
     ass:pos(ofx*offset + position.x, ofy*offset + position.y)
-    video_position = screen_to_video(position, video)
-    ass:append(video_position.x .. ', ' .. video_position.y)
+    ass:append(text)
 end
 
 function draw_crop_zone()
     if needs_drawing then
         local cursor_pos = {}
-        local dim = get_video_dimensions()
+        local video_dim = get_video_dimensions()
         cursor_pos.x, cursor_pos.y = mp.get_mouse_pos()
-        cursor_pos = clamp_to_screen(cursor_pos, dim)
+        cursor_pos = clamp_to_screen(cursor_pos, video_dim)
         local ass = assdraw.ass_new()
 
-        if crop_first_corner ~= nil then
-            local first_corner = video_to_screen(crop_first_corner, dim)
+        if crop_first_corner then
+            local first_corner = video_to_screen(crop_first_corner, video_dim)
             local c1, c2 = sort_corners(first_corner, cursor_pos)
-            draw_shade(ass, c1, c2, dim)
+            draw_shade(ass, c1, c2, video_dim)
         end
 
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
         draw_crosshair(ass, cursor_pos, window_size)
-        draw_position_text(ass, cursor_pos, window_size, dim, 6)
+
+        cursor_video = screen_to_video(cursor_pos, video_dim)
+        local text = string.format("%d, %d", cursor_video.x, cursor_video.y)
+        if crop_first_corner then
+            text = string.format("%s (%dx%d)", text,
+                math.abs(cursor_video.x - crop_first_corner.x),
+                math.abs(cursor_video.y - crop_first_corner.y)
+            )
+        end
+        draw_position_text(ass, text, cursor_pos, window_size, 6)
 
         mp.set_osd_ass(window_size.w, window_size.h, ass.text)
         needs_drawing = false
@@ -281,4 +289,4 @@ function cancel_crop()
 end
 
 mp.register_idle(draw_crop_zone)
-mp.add_key_binding("c", "start-crop", start_crop)
+mp.add_key_binding(nil, "start-crop", start_crop)

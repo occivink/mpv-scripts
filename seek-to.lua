@@ -109,5 +109,5 @@ function set_inactive()
     active = false
 end
 
-mp.add_key_binding("Ctrl+t", "toggle-seeker", function() if active then set_inactive() else set_active() end end)
+mp.add_key_binding(nil, "toggle-seeker", function() if active then set_inactive() else set_active() end end)
 

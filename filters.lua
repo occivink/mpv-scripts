@@ -21,7 +21,7 @@ function rotate(inc)
     mp.set_property_native("vf", vf_table)
 end
 
-function toggle_filter(filter)
+function toggle(filter)
     local vf_table = mp.get_property_native("vf")
     if #vf_table ~= 0 and vf_table[#vf_table]["name"] == filter then
         vf_table[#vf_table] = nil
@@ -41,11 +41,7 @@ function clear_filters()
     mp.set_property_native("vf", {})
 end
 
-mp.add_key_binding("r", "clock_rotate", function() rotate(90) end)
-mp.add_key_binding("alt+r", "counter_clock_rotate", function () rotate(-90) end)
-
-mp.add_key_binding("h", "toggle_flip", function() toggle_filter("flip") end)
-mp.add_key_binding("v", "toggle_mirror", function() toggle_filter("mirror") end)
-
-mp.add_key_binding("D", "clear_filters", clear_filters)
-mp.add_key_binding("d", "remove_last_filter", remove_last_filter)
+mp.add_key_binding(nil, "rotate", rotate)
+mp.add_key_binding(nil, "toggle", toggle)
+mp.add_key_binding(nil, "clear-filters", clear_filters)
+mp.add_key_binding(nil, "remove-last-filter", remove_last_filter)

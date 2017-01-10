@@ -75,13 +75,13 @@ function get_active_tracks()
 end
 
 function start_ffmpeg(args)
-    print(table.concat(args, " "))
     local res = utils.subprocess({ args = args, max_size = 0, cancellable = false })
     if res.status == 0 then
         mp.osd_message("Finished encoding succesfully")
     else
         mp.osd_message("Failed to encode")
         print("Check the command:")
+        print(table.concat(args, " "))
     end
 end
 

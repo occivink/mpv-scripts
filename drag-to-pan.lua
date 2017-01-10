@@ -87,9 +87,6 @@ function adjust_pan()
     end
 end
 
-function something()
-end
-
 function click_handler(table)
     if table["event"] == "down" then
         if not mp.get_property("filename") then return end
@@ -105,4 +102,4 @@ function click_handler(table)
 end
 
 mp.register_idle(adjust_pan)
-mp.add_key_binding("MOUSE_BTN0", "start-pan", click_handler, {complex=true})
+mp.add_key_binding(nil, "start-pan", click_handler, {complex=true})

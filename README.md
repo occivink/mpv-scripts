@@ -1,8 +1,31 @@
+# Bindings
+
+None of these scripts come with a default binding. Instead, you're encouraged to set your own in `input.conf`. As an example, this is the relevant part of mine:
+```
+#crop.lua
+c script-message-to crop start-crop
+#encode.lua
+e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k"
+E script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
+alt+e script-message-to encode clear_timestamp
+#drag-to-pan.lua
+MOUSE_BTN0 script-binding drag_to_pan/start-pan
+#seek-to.lua
+t script-message-to seek_to toggle-seeker
+#filters.lua
+r script-binding filter/rotate 90
+alt+r script-message-to filters rotate -90
+h script-message-to filters toggle flip
+v script-message-to filters toggle mirror
+D script-message-to filters clear-filters
+d script-message-to filters remove-last-filter
+```
+
 # crop.lua
 
 Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and handles additional properties (pan, zoom), there are other subtleties.
 
-Press `c` to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
+Press the binding to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
 You can use a binding such as `d vf del -1` to undo the last crop.
 
 # encode.lua
@@ -17,14 +40,14 @@ alt+e script-message-to encode clear_timestamp
 The first command takes four arguments:  
 `$container` (string): the output container, so webm/mkv/mp4/...  
 `$only_active_tracks` (true/false): if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.  
-`$preserve_filters` (true/false): whether to preserve some of the currently applied filters (crop, rotate, flip and mirror) into the extract. This is pretty useful combined with crop.lua.  
+`$preserve_filters` (true/false): whether to preserve some of the currently applied filters (crop, rotate, flip and mirror) into the extract. This is pretty useful combined with crop.lua. Note that you can not copy streams with the filters.  
 `$codec` (string): additional parameters, anything supported by ffmpeg goes  
 
 ## Examples:
 
 Encode a webm for your favorite imageboard:
 ```
-e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10"
+e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k"
 ```
 Slice a video without reencoding:
 ```
@@ -35,8 +58,8 @@ e script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
 
 Pans the current video or image along with cursor movement as long as a button is pressed.
 
-You can change the binding from `MOUSE_BTN0` to whatever you want, it doesn't even have to be a mouse button.
-The default binding clashes with the window dragging feature, you can either set `window-dragging=no` in your config or change the binding.
+The script is intended to be used with a mouse binding, such as `MOUSE_BTN0` but you can use whatever.
+Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
 
 Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something, to be determined.
 
@@ -44,9 +67,7 @@ Quick diagonal movement looks shitty because setting the `video-pan-*` property 
 
 Seek to an absolute position in the current video.
 
-Toggle with `ctrl+t`. Move the current cursor position with `left`, `right`. Change the number currently selected with the number keys (duh). Press `enter` to seek to the entered position.
-
-I may add history in the future.
+Toggle with whatever binding you chose. Move the current cursor position with `<-`, `->`. Change the number currently selected with the number keys (duh). Press `enter` to seek to the entered position.
 
 # filters.lua
 
