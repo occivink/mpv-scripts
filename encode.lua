@@ -31,18 +31,18 @@ end
 function get_video_filters_string()
     local filters = {}
     local vf_table = mp.get_property_native("vf")
-    for i = 1, #vf_table do
-        local filter_name = vf_table[i]["name"]
+    for _, vf in ipairs(vf_table) do
+        local name = vf["name"]
         local filter
-        if filter_name == "crop" then
-            local p = vf_table[i]["params"]
+        if name == "crop" then
+            local p = vf["params"]
             filter = string.format("crop=%d:%d:%d:%d", p["w"], p["h"], p["x"], p["y"])
-        elseif filter_name == "mirror" then
+        elseif name == "mirror" then
             filter = "hflip"
-        elseif filter_name == "flip" then
+        elseif name == "flip" then
             filter = "vflip"
-        elseif filter_name == "rotate" then
-            local rotation = tonumber(vf_table[i]["params"]["angle"])
+        elseif name == "rotate" then
+            local rotation = tonumber(vf["params"]["angle"])
             -- rotate is NOT the filter we want here
             if rotation == 90 then
                 filter = string.format("transpose=clock")
@@ -65,8 +65,7 @@ function get_active_tracks()
         sub = mp.get_property_bool("sub-visibility")
     }
     local active_tracks = {}
-    for i = 1, #tracks do
-        local track = tracks[i]
+    for _, track in ipairs(tracks) do
         if track["selected"] and accepted[track["type"]] then
             active_tracks[#active_tracks + 1] = string.format("0:%d", track["ff-index"])
         end

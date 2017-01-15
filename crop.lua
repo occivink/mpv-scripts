@@ -273,8 +273,8 @@ function start_crop()
         "osd-width",
         "osd-height",
     }
-    for i = 1, #properties do
-        mp.observe_property(properties[i], "native", reset_crop)
+    for _, p in ipairs(properties) do
+        mp.observe_property(p, "native", reset_crop)
     end
 end
 
