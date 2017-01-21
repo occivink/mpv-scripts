@@ -23,7 +23,7 @@ d script-message-to filters remove-last-filter
 
 # crop.lua
 
-Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and handles additional properties (pan, zoom), there are other subtleties.
+Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and is aware of some properties like pan or zoom, there are other subtleties.
 
 Press the binding to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
 You can use a binding such as `d vf del -1` to undo the last crop.
@@ -56,7 +56,7 @@ e script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
 
 # drag-to-pan.lua
 
-Pans the current video or image along with cursor movement as long as a button is pressed.
+Pan the current video or image with the cursor.
 
 The script is intended to be used with a mouse binding, such as `MOUSE_BTN0` but you can use whatever.
 Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
@@ -65,7 +65,7 @@ Quick diagonal movement looks shitty because setting the `video-pan-*` property 
 
 # seek-to.lua
 
-Seek to an absolute position in the current video.
+Seek to an absolute position in the current video by typing its timestamp.
 
 Toggle with whatever binding you chose. Move the current cursor position with `<-`, `->`. Change the number currently selected with the number keys (duh). Press `enter` to seek to the entered position.
 
