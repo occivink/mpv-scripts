@@ -31,13 +31,36 @@ function toggle(filter)
     mp.set_property_native("vf", vf_table)
 end
 
+local filters_undo_stack = {}
+
 function remove_last_filter()
     local vf_table = mp.get_property_native("vf")
+    if #vf_table == 0 then
+        return
+    end
+    filters_undo_stack[#filters_undo_stack + 1] = vf_table[#vf_table]
     vf_table[#vf_table] = nil
     mp.set_property_native("vf", vf_table)
 end
 
+function undo_filter_removal()
+    if #filters_undo_stack == 0 then
+        return
+    end
+    local vf_table = mp.get_property_native("vf")
+    vf_table[#vf_table + 1] = filters_undo_stack[#filters_undo_stack]
+    filters_undo_stack[#filters_undo_stack] = nil
+    mp.set_property_native("vf", vf_table)
+end
+
 function clear_filters()
+    local vf_table = mp.get_property_native("vf")
+    if #vf_table == 0 then
+        return
+    end
+    for i = 1, #vf_table do
+        filters_undo_stack[#filters_undo_stack + 1] = vf_table[#vf_table + 1 - i]
+    end
     mp.set_property_native("vf", {})
 end
 
@@ -45,3 +68,4 @@ mp.add_key_binding(nil, "rotate", rotate)
 mp.add_key_binding(nil, "toggle", toggle)
 mp.add_key_binding(nil, "clear-filters", clear_filters)
 mp.add_key_binding(nil, "remove-last-filter", remove_last_filter)
+mp.add_key_binding(nil, "undo-filter-removal", undo_filter_removal)
