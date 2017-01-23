@@ -40,8 +40,8 @@ alt+e script-message-to encode clear_timestamp
 The first command takes four arguments:  
 `$container` (string): the output container, so webm/mkv/mp4/...  
 `$only_active_tracks` (true/false): if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.  
-`$preserve_filters` (true/false): whether to preserve some of the currently applied filters (crop, rotate, flip and mirror) into the extract. This is pretty useful combined with crop.lua. Note that you can not copy streams with the filters.  
-`$codec` (string): additional parameters, anything supported by ffmpeg goes  
+`$preserve_filters` (true/false): whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
+`$codec` (string): additional parameters, anything supported by ffmpeg goes.  
 
 ## Examples:
 

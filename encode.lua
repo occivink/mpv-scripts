@@ -8,20 +8,26 @@ function append_table(lhs, rhs)
     return lhs
 end
 
+function file_exists(name)
+    local f = io.open(name, "r")
+    if f ~= nil then
+        io.close(f)
+        return true
+    else
+        return false
+    end
+end
+
 function get_unused_filename(prefix, suffix)
-    local function file_exists(name)
-        local f = io.open(name,"r")
-        if f ~= nil then
-            io.close(f)
-            return true
-        else
-            return false
-        end
+    local res = utils.readdir(".")
+    local files = {}
+    for _, f in ipairs(res) do
+        files[f] = true
     end
     local i = 1
     while true do
         local potential_name = prefix .. "_" .. i .. suffix
-        if not file_exists(potential_name) then
+        if not files[potential_name] then
             return potential_name
         end
         i = i + 1
@@ -84,17 +90,17 @@ function start_ffmpeg(args)
     end
 end
 
-function start_encoding(from, to, settings)
-    local input = mp.get_property("path")
-    local filename = mp.get_property("filename/no-ext")
+function start_encoding(path, from, to, settings)
+    local filename = mp.get_property("filename/no-ext") or "encode"
+
     local args = {
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
-        "-i", input,
+        "-i", path,
         "-ss", from,
         "-to", to
     }
-    
+
     -- map currently playing channels
     if settings.only_active_tracks == "true" then
         local tracks = get_active_tracks()
@@ -120,13 +126,23 @@ function start_encoding(from, to, settings)
 end
 
 function set_timestamp(container, only_active_tracks, preserve_filters, codec)
+    local path = mp.get_property("path")
+    if not path then
+        mp.osd_message("No file currently playing")
+        return
+    end
+    if not file_exists(path) then
+        mp.osd_message("Cannot encode streams")
+        return
+    end
+
     if start_timestamp == nil then
         mp.osd_message("Start timestamp set")
         start_timestamp = mp.get_property_number("time-pos")
     else
         local current_timestamp = mp.get_property_number("time-pos")
         if current_timestamp <= start_timestamp then
-            mp.osd_message("Second timestamp can't be before the first")
+            mp.osd_message("Second timestamp cannot be before the first")
             return
         end
         mp.osd_message("End timestamp set, encoding...")
@@ -136,7 +152,7 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec)
             preserve_filters = preserve_filters,
             codec = codec
         }
-        start_encoding(start_timestamp, current_timestamp, settings)
+        start_encoding(path, start_timestamp, current_timestamp, settings)
         start_timestamp = nil
     end
 end
