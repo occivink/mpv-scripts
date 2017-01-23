@@ -121,7 +121,15 @@ function start_encoding(path, from, to, settings)
         args[#args + 1] = token
     end
 
-    args[#args + 1] = get_unused_filename(filename, "." .. settings.container)
+    -- use the directory of the video as output location
+    -- should probably be configurable at some point
+    local _, pos = path:reverse():find(mp.get_property("filename"):reverse(), 1, true)
+    local directory = ""
+    if pos then
+        directory = string.sub(path, 1, #path - pos)
+    end
+    args[#args + 1] = directory .. get_unused_filename(filename, "." .. settings.container)
+
     mp.add_timeout(0, function() start_ffmpeg(args) end)
 end
 
