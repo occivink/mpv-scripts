@@ -1,3 +1,7 @@
+# Foreword
+
+These scripts are completely independent. Some of them work together nicely (e.g. crop.lua and encode.lua) but that's it. Just copy whichever scripts you're interested in your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for instructions).  
+
 # Bindings
 
 None of these scripts come with a default binding. Instead, you're encouraged to set your own in `input.conf`. As an example, this is the relevant part of mine:
@@ -17,8 +21,9 @@ r script-binding filter/rotate 90
 alt+r script-message-to filters rotate -90
 h script-message-to filters toggle flip
 v script-message-to filters toggle mirror
-D script-message-to filters clear-filters
 d script-message-to filters remove-last-filter
+D script-message-to filters clear-filters
+alt+d script-message-to filters undo-filter-removal
 ```
 
 # crop.lua
@@ -49,7 +54,7 @@ Encode a webm for your favorite imageboard:
 ```
 e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k"
 ```
-Slice a video without reencoding:
+Slice a video without reencoding (the extract will be snapped to keyframes, watch out):
 ```
 e script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
 ```
