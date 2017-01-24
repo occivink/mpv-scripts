@@ -1,10 +1,10 @@
 # Foreword
 
-These scripts are completely independent. Some of them work together nicely (e.g. crop.lua and encode.lua) but that's it. Just copy whichever scripts you're interested in your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for instructions).  
+These scripts are completely independent. Some of them work together nicely (e.g. `crop.lua` and `encode.lua`) but that's it. Just copy whichever scripts you're interested in to your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for installation instructions).  
 
-# Bindings
+## Bindings
 
-None of these scripts come with a default binding. Instead, you're encouraged to set your own in `input.conf`. As an example, this is the relevant part of mine:
+None of these scripts come with default bindings. Instead, you're encouraged to set your own in `input.conf`. As an example, this is the relevant part of mine:
 ```
 #crop.lua
 c script-message-to crop start-crop
@@ -47,6 +47,17 @@ The first command takes four arguments:
 `$only_active_tracks` (true/false): if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.  
 `$preserve_filters` (true/false): whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
 `$codec` (string): additional parameters, anything supported by ffmpeg goes.  
+
+## Static configuration
+
+The following two parameters can be tweaked in your `lua-settings/encode.conf`:
+```
+# run ffmpeg detached from mpv
+detached=[yes/no]
+# use the current working directory for the output
+use_current_working_dir=[yes/no]
+```
+Both parameters are explained more in details in `encode.lua`
 
 ## Examples:
 

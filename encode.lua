@@ -1,5 +1,18 @@
 local start_timestamp = nil
 local utils = require "mp.utils"
+local options = require "mp.options"
+
+local o = {
+    -- if true, the ffmpeg process will be detached and we won't know if it
+    -- succeeded or not and we can stop mpv at any time
+    -- if false, we know the result of calling ffmpeg, but we can only encode
+    -- one extract at a time and mpv will block on exit
+    detached = false,
+    -- if true, the current working directory of mpv is used for the output
+    -- if false, the directory of the input is used
+    use_current_working_dir = false
+}
+options.read_options(o)
 
 function append_table(lhs, rhs)
     for i = 1,#rhs do
@@ -18,15 +31,15 @@ function file_exists(name)
     end
 end
 
-function get_unused_filename(prefix, suffix)
-    local res = utils.readdir(".")
+function get_unused_filename(dir, prefix, suffix)
+    local res = utils.readdir(dir)
     local files = {}
     for _, f in ipairs(res) do
         files[f] = true
     end
     local i = 1
     while true do
-        local potential_name = prefix .. "_" .. i .. suffix
+        local potential_name = string.format("%s_%d%s", prefix, i, suffix)
         if not files[potential_name] then
             return potential_name
         end
@@ -79,17 +92,6 @@ function get_active_tracks()
     return active_tracks
 end
 
-function start_ffmpeg(args)
-    local res = utils.subprocess({ args = args, max_size = 0, cancellable = false })
-    if res.status == 0 then
-        mp.osd_message("Finished encoding succesfully")
-    else
-        mp.osd_message("Failed to encode")
-        print("Check the command:")
-        print(table.concat(args, " "))
-    end
-end
-
 function start_encoding(path, from, to, settings)
     local filename = mp.get_property("filename/no-ext") or "encode"
 
@@ -117,20 +119,30 @@ function start_encoding(path, from, to, settings)
         end
     end
 
+    -- split the user-passed settings on whitespace
     for token in string.gmatch(settings.codec, "[^%s]+") do
         args[#args + 1] = token
     end
 
-    -- use the directory of the video as output location
-    -- should probably be configurable at some point
-    local _, pos = path:reverse():find(mp.get_property("filename"):reverse(), 1, true)
-    local directory = ""
-    if pos then
-        directory = string.sub(path, 1, #path - pos)
+    -- path of the output
+    local directory = "."
+    if not o.use_current_working_dir then
+        directory, _ = utils.split_path(path)
     end
-    args[#args + 1] = directory .. get_unused_filename(filename, "." .. settings.container)
+    local output = get_unused_filename(directory, filename, "." .. settings.container)
+    args[#args + 1] = utils.join_path(directory, output)
 
-    mp.add_timeout(0, function() start_ffmpeg(args) end)
+    print(table.concat(args, " "))
+    if o.detached then
+        utils.subprocess_detached({ args = args })
+    else
+        local res = utils.subprocess({ args = args, max_size = 0, cancellable = false })
+        if res.status == 0 then
+            mp.osd_message("Finished encoding succesfully")
+        else
+            mp.osd_message("Failed to encode, check the log")
+        end
+    end
 end
 
 function set_timestamp(container, only_active_tracks, preserve_filters, codec)
