@@ -43,10 +43,10 @@ alt+e script-message-to encode clear_timestamp
 ```
 
 The first command takes four arguments:  
-`$container` (string): the output container, so webm/mkv/mp4/...  
-`$only_active_tracks` (true/false): if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.  
-`$preserve_filters` (true/false): whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
-`$codec` (string): additional parameters, anything supported by ffmpeg goes.  
+`$container` [string]: the output container, so webm/mkv/mp4/...  
+`$only_active_tracks` [true/false]: if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio/subs to be part of the extract.  
+`$preserve_filters` [true/false]: whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
+`$codec` [string]: additional parameters, anything supported by ffmpeg goes.  
 
 ## Static configuration
 
@@ -57,9 +57,9 @@ detached=[yes/no]
 # use the current working directory for the output
 use_current_working_dir=[yes/no]
 ```
-Both parameters are explained more in details in `encode.lua`
+Both parameters are explained more in details in `encode.lua`.
 
-## Examples:
+## Examples
 
 Encode a webm for your favorite imageboard:
 ```
@@ -77,7 +77,7 @@ Pan the current video or image with the cursor.
 The script is intended to be used with a mouse binding, such as `MOUSE_BTN0` but you can use whatever.
 Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
 
-Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something, to be determined.
+Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something. There's not much we can do about this script-side.
 
 # seek-to.lua
 
@@ -87,4 +87,4 @@ Toggle with whatever binding you chose. Move the current cursor position with `<
 
 # filters.lua
 
-Some not-very-useful helper commands for handling filters and what not.
+Some not-very-useful helper commands for handling filters with undo capability.

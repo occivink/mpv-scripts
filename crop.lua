@@ -7,11 +7,13 @@ function get_video_dimensions()
     if not dimensions_changed then
         return _video_dimensions
     end
-    _video_dimensions = {}
-    dimensions_changed = false
     -- this function is very much ripped from video/out/aspect.c in mpv's source
-    local keep_aspect = mp.get_property_bool("keepaspect")
     local video_params = mp.get_property_native("video-out-params")
+    if not video_params then
+        return nil
+    end
+    dimensions_changed = false
+    local keep_aspect = mp.get_property_bool("keepaspect")
     local w = video_params["w"]
     local h = video_params["h"]
     local dw = video_params["dw"]
@@ -20,6 +22,7 @@ function get_video_dimensions()
         w, h = h,w
         dw, dh = dh, dw
     end
+    _video_dimensions = {}
     if keep_aspect then
         local unscaled = mp.get_property_native("video-unscaled")
         local panscan = mp.get_property_number("panscan")
@@ -190,6 +193,10 @@ function draw_crop_zone()
     if needs_drawing then
         local cursor_pos = {}
         local video_dim = get_video_dimensions()
+        if not video_dim then
+            cancel_crop()
+            return
+        end
         cursor_pos.x, cursor_pos.y = mp.get_mouse_pos()
         cursor_pos = clamp_to_screen(cursor_pos, video_dim)
         local ass = assdraw.ass_new()
@@ -234,8 +241,12 @@ function crop_video(x, y, w, h)
 end
 
 function update_crop_zone_state()
-    local second_corner = {}
     local dim = get_video_dimensions()
+    if not dim then
+        cancel_crop()
+        return
+    end
+    local second_corner = {}
     second_corner.x, second_corner.y = mp.get_mouse_pos()
     second_corner = clamp_to_screen(second_corner, dim)
     second_corner = screen_to_video(second_corner, dim)
@@ -254,7 +265,9 @@ function reset_crop()
 end
 
 function start_crop()
-    if not mp.get_property("filename") then return end
+    if not mp.get_property("options/video") then
+        return
+    end
     needs_drawing = true
     dimensions_changed = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)
