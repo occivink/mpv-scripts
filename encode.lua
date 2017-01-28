@@ -105,8 +105,9 @@ function start_encoding(path, from, to, settings)
 
     -- map currently playing channels
     if settings.only_active_tracks == "true" then
-        local tracks = get_active_tracks()
-        args = append_table(args, { "-map", tracks[i] })
+        for _, t in ipairs(get_active_tracks()) do
+            args = append_table(args, { "-map", t })
+        end
     end
 
     -- apply some of the video filters currently in the chain
