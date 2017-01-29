@@ -13,11 +13,12 @@ e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -c
 E script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
 alt+e script-message-to encode clear_timestamp
 #drag-to-pan.lua
+#this binding is special because we need to monitor up and down events for this key
 MOUSE_BTN0 script-binding drag_to_pan/start-pan
 #seek-to.lua
 t script-message-to seek_to toggle-seeker
 #filters.lua
-r script-binding filter/rotate 90
+r script-message-to filters rotate 90
 alt+r script-message-to filters rotate -90
 h script-message-to filters toggle flip
 v script-message-to filters toggle mirror
@@ -83,7 +84,8 @@ Quick diagonal movement looks shitty because setting the `video-pan-*` property 
 
 Seek to an absolute position in the current video by typing its timestamp.
 
-Toggle with whatever binding you chose. Move the current cursor position with `<-`, `->`. Change the number currently selected with the number keys (duh). Press `enter` to seek to the entered position.
+Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
+Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
 
 # filters.lua
 
