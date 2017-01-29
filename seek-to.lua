@@ -69,6 +69,19 @@ function backspace()
     current_time[cursor_position] = 0
 end
 
+local key_mappings = {
+    LEFT  = function() shift_cursor(true) show_seeker() end,
+    RIGHT = function() shift_cursor(false) show_seeker() end,
+    BS    = function() backspace() show_seeker() end,
+    ESC   = set_inactive,
+    ENTER = function() seek_to() set_inactive() end
+}
+for i = 0, 9 do
+    local func = function() change_number(i) show_seeker() end
+    key_mappings[string.format("KP%d", i)] = func
+    key_mappings[string.format("%d", i)] = func
+end
+
 function set_active()
     if not mp.get_property("seekable") then return end
     -- find duration of the video and set cursor position accordingly
@@ -81,15 +94,9 @@ function set_active()
             end
         end
     end
-    for i = 0, 9 do
-        mp.add_forced_key_binding("KP"..i, "seek-to-KP-"..i, function() change_number(i) show_seeker() end)
-        mp.add_forced_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) show_seeker() end)
+    for key, func in pairs(key_mappings) do
+        mp.add_forced_key_binding(key, "seek-to-"..key, func)
     end
-    mp.add_forced_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) show_seeker() end)
-    mp.add_forced_key_binding("RIGHT", "seek-to-RIGHT", function() shift_cursor(false) show_seeker() end)
-    mp.add_forced_key_binding("BS", "seek-to-BACKSPACE", function() backspace() show_seeker() end)
-    mp.add_forced_key_binding("ESC", "seek-to-ESC", set_inactive)
-    mp.add_forced_key_binding("ENTER", "seek-to-ENTER", function() seek_to() set_inactive() end)
     show_seeker()
     timer = mp.add_periodic_timer(timer_duration, show_seeker)
     active = true
@@ -98,15 +105,9 @@ end
 function set_inactive()
     local sX, sY = mp.get_osd_size()
     mp.osd_message("")
-    for i = 0, 9 do
-        mp.remove_key_binding("seek-to-KP"..i)
-        mp.remove_key_binding("seek-to-"..i)
+    for key, _ in pairs(key_mappings) do
+        mp.remove_key_binding("seek-to-"..key)
     end
-    mp.remove_key_binding("seek-to-LEFT")
-    mp.remove_key_binding("seek-to-RIGHT")
-    mp.remove_key_binding("seek-to-BACKSPACE")
-    mp.remove_key_binding("seek-to-ESC")
-    mp.remove_key_binding("seek-to-ENTER")
     timer:kill()
     active = false
 end
