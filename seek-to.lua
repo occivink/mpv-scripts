@@ -82,6 +82,7 @@ function set_active()
         end
     end
     for i = 0, 9 do
+        mp.add_forced_key_binding("KP"..i, "seek-to-KP-"..i, function() change_number(i) show_seeker() end)
         mp.add_forced_key_binding(tostring(i), "seek-to-"..i, function() change_number(i) show_seeker() end)
     end
     mp.add_forced_key_binding("LEFT", "seek-to-LEFT", function() shift_cursor(true) show_seeker() end)
@@ -98,6 +99,7 @@ function set_inactive()
     local sX, sY = mp.get_osd_size()
     mp.osd_message("")
     for i = 0, 9 do
+        mp.remove_key_binding("seek-to-KP"..i)
         mp.remove_key_binding("seek-to-"..i)
     end
     mp.remove_key_binding("seek-to-LEFT")
