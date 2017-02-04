@@ -108,6 +108,8 @@ function start_encoding(path, from, to, settings)
         for _, t in ipairs(get_active_tracks()) do
             args = append_table(args, { "-map", t })
         end
+    else
+        args = append_table(args, { "-map", "0" })
     end
 
     -- apply some of the video filters currently in the chain
