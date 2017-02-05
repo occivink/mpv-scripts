@@ -265,9 +265,7 @@ function reset_crop()
 end
 
 function start_crop()
-    if not mp.get_property("options/video") then
-        return
-    end
+    if not mp.get_property("path") or mp.get_property("video") == "no" then return end
     needs_drawing = true
     dimensions_changed = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)

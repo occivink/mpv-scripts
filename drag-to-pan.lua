@@ -89,12 +89,12 @@ end
 
 function click_handler(table)
     if table["event"] == "down" then
-        if not mp.get_property("filename") then return end
+        if not mp.get_property("path") or mp.get_property("video") == "no" then return end
         compute_video_dimensions()
         mouse_pos_origin.x, mouse_pos_origin.y = mp.get_mouse_pos()
         video_pan_origin.x = mp.get_property("video-pan-x")
         video_pan_origin.y = mp.get_property("video-pan-y")
-        mp.add_forced_key_binding("mouse_move", "drag-to-pan", function () needs_adjusting = true end)
+        mp.add_forced_key_binding("mouse_move", "drag-to-pan", function() needs_adjusting = true end)
     elseif table["event"] == "up" then
         mp.remove_key_binding("drag-to-pan")
         needs_adjusting = false
@@ -102,4 +102,4 @@ function click_handler(table)
 end
 
 mp.register_idle(adjust_pan)
-mp.add_key_binding(nil, "start-pan", click_handler, {complex=true})
+mp.add_key_binding(nil, "start-pan", click_handler, {complex = true})
