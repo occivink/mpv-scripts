@@ -115,7 +115,7 @@ local key_mappings = {
     UP    = function() history_move(true) show_seeker() end,
     DOWN  = function() history_move(false) show_seeker() end,
     BS    = function() backspace() show_seeker() end,
-    ESC   = set_inactive,
+    ESC   = function() set_inactive() end,
     ENTER = function() seek_to() set_inactive() end
 }
 for i = 0, 9 do
