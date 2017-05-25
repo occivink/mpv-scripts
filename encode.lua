@@ -92,6 +92,18 @@ function get_active_tracks()
     return active_tracks
 end
 
+function seconds_to_time_string(seconds)
+    local ret = string.format("%02d:%02d.%03d"
+        , math.floor(seconds / 60) % 60
+        , math.floor(seconds) % 60
+        , seconds * 1000 % 1000
+    )
+    if seconds > 3600 then
+        ret = string.format("%d:%s", string(math.floor(seconds / 3600)), ret)
+    end
+    return ret
+end
+
 function start_encoding(path, from, to, settings)
     local filename = mp.get_property("filename/no-ext") or "encode"
 
@@ -99,8 +111,8 @@ function start_encoding(path, from, to, settings)
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
         "-i", path,
-        "-ss", from,
-        "-to", to
+        "-ss", seconds_to_time_string(from),
+        "-to", seconds_to_time_string(to)
     }
 
     -- map currently playing channels
@@ -160,15 +172,18 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec)
     end
 
     if start_timestamp == nil then
-        mp.osd_message("Start timestamp set")
         start_timestamp = mp.get_property_number("time-pos")
+        mp.osd_message("Encoding from " .. seconds_to_time_string(start_timestamp))
     else
         local current_timestamp = mp.get_property_number("time-pos")
         if current_timestamp <= start_timestamp then
             mp.osd_message("Second timestamp cannot be before the first")
             return
         end
-        mp.osd_message("End timestamp set, encoding...")
+        mp.osd_message(string.format("Started encoding from %s to %s"
+            , seconds_to_time_string(start_timestamp)
+            , seconds_to_time_string(current_timestamp)
+        ))
         local settings = {
             container = container,
             only_active_tracks = only_active_tracks,
