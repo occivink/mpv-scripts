@@ -27,6 +27,7 @@ The first command takes four arguments:
 `$only_active_tracks` [true/false]: if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract.  
 `$preserve_filters` [true/false]: whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
 `$codec` [string]: additional parameters, anything supported by ffmpeg goes.  
+`$output_path` [string]: the path of the created extract. Empty means the same directory as the input. Relative paths are relative to mpv's working directory, absolute ones work like you would expect.  
 
 ## Examples
 
@@ -41,14 +42,14 @@ e script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
 
 ## Static configuration
 
-The following two settings can be tweaked in your `lua-settings/encode.conf`:
+The following setting can be tweaked in your `lua-settings/encode.conf`:
 ```
-# run ffmpeg detached from mpv
+# if yes, the ffmpeg process will be detached and we won't know if it
+# succeeded or not and we can stop mpv at any time
+# if no, we know the result of calling ffmpeg, but we can only encode
+# one extract at a time and mpv will block on exit
 detached=[yes/no]
-# use the current working directory for the output
-use_current_working_dir=[yes/no]
 ```
-Both parameters are explained more in details in `encode.lua`.
 
 # drag-to-pan.lua
 

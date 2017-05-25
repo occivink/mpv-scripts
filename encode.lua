@@ -8,9 +8,6 @@ local o = {
     -- if false, we know the result of calling ffmpeg, but we can only encode
     -- one extract at a time and mpv will block on exit
     detached = false,
-    -- if true, the current working directory of mpv is used for the output
-    -- if false, the directory of the input is used
-    use_current_working_dir = false
 }
 options.read_options(o)
 
@@ -140,8 +137,8 @@ function start_encoding(path, from, to, settings)
     end
 
     -- path of the output
-    local directory = "."
-    if not o.use_current_working_dir then
+    local directory = settings.output_path
+    if not directory or directory == "" then
         directory, _ = utils.split_path(path)
     end
     local output = get_unused_filename(directory, filename, "." .. settings.container)
@@ -160,7 +157,7 @@ function start_encoding(path, from, to, settings)
     end
 end
 
-function set_timestamp(container, only_active_tracks, preserve_filters, codec)
+function set_timestamp(container, only_active_tracks, preserve_filters, codec, output_path)
     local path = mp.get_property("path")
     if not path then
         mp.osd_message("No file currently playing")
@@ -188,7 +185,8 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec)
             container = container,
             only_active_tracks = only_active_tracks,
             preserve_filters = preserve_filters,
-            codec = codec
+            codec = codec,
+            output_path = output_path
         }
         start_encoding(path, start_timestamp, current_timestamp, settings)
         start_timestamp = nil
