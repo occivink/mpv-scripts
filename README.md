@@ -88,8 +88,8 @@ Some commands that are too simple to warrant their own script. See example bindi
 c script-message-to crop start-crop
 
 # encode.lua
-e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k"
-E script-message-to encode set_timestamp mkv false false "-c copy"
+e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k" "./"
+E script-message-to encode set_timestamp mkv false false "-c copy" "./"
 alt+e script-message-to encode clear_timestamp
 
 # drag-to-pan.lua
