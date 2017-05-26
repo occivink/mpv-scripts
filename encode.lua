@@ -28,15 +28,27 @@ function file_exists(name)
     end
 end
 
-function get_unused_filename(dir, prefix, suffix)
+function get_output_string(dir, format, input, from, to)
     local res = utils.readdir(dir)
     local files = {}
     for _, f in ipairs(res) do
         files[f] = true
     end
+    local output = format
+    output = string.gsub(output, "$f", input)
+    output = string.gsub(output, "$s", seconds_to_time_string(from, true))
+    output = string.gsub(output, "$e", seconds_to_time_string(to, true))
+    output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
+    if not string.find(output, "$n") then
+        if not files[output] then
+            return output
+        else
+            return nil
+        end
+    end
     local i = 1
     while true do
-        local potential_name = string.format("%s_%d%s", prefix, i, suffix)
+        local potential_name = string.gsub(output, "$n", tostring(i))
         if not files[potential_name] then
             return potential_name
         end
@@ -89,14 +101,14 @@ function get_active_tracks()
     return active_tracks
 end
 
-function seconds_to_time_string(seconds)
+function seconds_to_time_string(seconds, full)
     local ret = string.format("%02d:%02d.%03d"
         , math.floor(seconds / 60) % 60
         , math.floor(seconds) % 60
         , seconds * 1000 % 1000
     )
-    if seconds > 3600 then
-        ret = string.format("%d:%s", string(math.floor(seconds / 3600)), ret)
+    if full or seconds > 3600 then
+        ret = string.format("%d:%s", math.floor(seconds / 3600), ret)
     end
     return ret
 end
@@ -108,8 +120,8 @@ function start_encoding(path, from, to, settings)
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
         "-i", path,
-        "-ss", seconds_to_time_string(from),
-        "-to", seconds_to_time_string(to)
+        "-ss", seconds_to_time_string(from, false),
+        "-to", seconds_to_time_string(to, false)
     }
 
     -- map currently playing channels
@@ -137,11 +149,16 @@ function start_encoding(path, from, to, settings)
     end
 
     -- path of the output
-    local directory = settings.output_path
-    if not directory or directory == "" then
+    local directory = settings.output_directory
+    if directory == "" then
         directory, _ = utils.split_path(path)
     end
-    local output = get_unused_filename(directory, filename, "." .. settings.container)
+    output = string.format("%s.%s", settings.output_format, settings.container)
+    local output = get_output_string(directory, output, filename, from, to)
+    if not output then
+        mp.osd_message("Invalid filename")
+        return
+    end
     args[#args + 1] = utils.join_path(directory, output)
 
     print(table.concat(args, " "))
@@ -157,7 +174,7 @@ function start_encoding(path, from, to, settings)
     end
 end
 
-function set_timestamp(container, only_active_tracks, preserve_filters, codec, output_path)
+function set_timestamp(container, only_active_tracks, preserve_filters, codec, output_directory, output_format)
     local path = mp.get_property("path")
     if not path then
         mp.osd_message("No file currently playing")
@@ -170,7 +187,7 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec, o
 
     if start_timestamp == nil then
         start_timestamp = mp.get_property_number("time-pos")
-        mp.osd_message("Encoding from " .. seconds_to_time_string(start_timestamp))
+        mp.osd_message("Encoding from " .. seconds_to_time_string(start_timestamp, false))
     else
         local current_timestamp = mp.get_property_number("time-pos")
         if current_timestamp <= start_timestamp then
@@ -178,15 +195,16 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec, o
             return
         end
         mp.osd_message(string.format("Started encoding from %s to %s"
-            , seconds_to_time_string(start_timestamp)
-            , seconds_to_time_string(current_timestamp)
+            , seconds_to_time_string(start_timestamp, false)
+            , seconds_to_time_string(current_timestamp, false)
         ))
         local settings = {
             container = container,
             only_active_tracks = only_active_tracks,
             preserve_filters = preserve_filters,
             codec = codec,
-            output_path = output_path
+            output_directory = output_path or "",
+            output_format = output_format or "$f_$n"
         }
         start_encoding(path, start_timestamp, current_timestamp, settings)
         start_timestamp = nil

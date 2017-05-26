@@ -18,16 +18,17 @@ You can use a binding such as `d vf del -1` to undo the last crop.
 Make an extract of the currently playing video using `ffmpeg`. Press the binding once to set the beginning of the extract. Press a second time to set the end and start encoding.  
 This script defines two commands that you can bind in your `input.conf` like so:
 ```
-e script-message-to encode set_timestamp $container $only_active_tracks $preserve_filters $codec
+e script-message-to encode set_timestamp $container $only_active_tracks $preserve_filters $codec $output_directory $output_format
 alt+e script-message-to encode clear_timestamp
 ```
 
-The first command takes four arguments:  
+The first command takes six arguments:  
 `$container` [string]: the output container, so webm/mkv/mp4/...  
 `$only_active_tracks` [true/false]: if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract.  
 `$preserve_filters` [true/false]: whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
 `$codec` [string]: additional parameters, anything supported by ffmpeg goes.  
-`$output_path` [string]: the path of the created extract. Empty means the same directory as the input. Relative paths are relative to mpv's working directory, absolute ones work like you would expect.  
+`$output_directory` [string, optional]: the path of the created extract. Empty means the same directory as the input. Relative paths are relative to mpv's working directory, absolute ones work like you would expect.  
+`$output_format` [string, optional]: format of the output filename. Does basic interpolation on the following variables: $f, $s, $e, $d, $n which respectively represent input filename, start timestamp, end timestamp, duration and an incrementing number in case of conflicts. Default is `$f_$n`. The extension is automatically appended.  
 
 ## Examples
 
