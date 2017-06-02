@@ -191,24 +191,31 @@ end
 
 function draw_crop_zone()
     if needs_drawing then
-        local cursor_pos = {}
         local video_dim = get_video_dimensions()
         if not video_dim then
             cancel_crop()
             return
         end
+        
+        local window_size = {}
+        window_size.w, window_size.h = mp.get_osd_size()
+        local cursor_pos = {}
         cursor_pos.x, cursor_pos.y = mp.get_mouse_pos()
         cursor_pos = clamp_to_screen(cursor_pos, video_dim)
         local ass = assdraw.ass_new()
-
+        
         if crop_first_corner then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
             local c1, c2 = sort_corners(first_corner, cursor_pos)
-            draw_shade(ass, c1, c2, video_dim)
+            -- don't draw shade over non-visible video parts
+            local video_shown = {}
+            video_shown.x1 = clamp(0, video_dim.x1, window_size.w)
+            video_shown.x2 = clamp(0, video_dim.x2, window_size.w)
+            video_shown.y1 = clamp(0, video_dim.y1, window_size.h)
+            video_shown.y2 = clamp(0, video_dim.y2, window_size.h)
+            draw_shade(ass, c1, c2, video_shown)
         end
 
-        local window_size = {}
-        window_size.w, window_size.h = mp.get_osd_size()
         draw_crosshair(ass, cursor_pos, window_size)
 
         cursor_video = screen_to_video(cursor_pos, video_dim)
