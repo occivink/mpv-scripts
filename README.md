@@ -18,38 +18,71 @@ You can use a binding such as `d vf del -1` to undo the last crop.
 Make an extract of the currently playing video using `ffmpeg`. Press the binding once to set the beginning of the extract. Press a second time to set the end and start encoding.  
 This script defines two commands that you can bind in your `input.conf` like so:
 ```
-e script-message-to encode set_timestamp $container $only_active_tracks $preserve_filters $codec $output_directory $output_format
+e script-message-to encode set_timestamp $PROFILE
 alt+e script-message-to encode clear_timestamp
 ```
 
-The first command takes six arguments:  
-`$container` [string]: the output container, so webm/mkv/mp4/...  
-`$only_active_tracks` [true/false]: if true, only encode the currently active tracks. For example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract.  
-`$preserve_filters` [true/false]: whether to preserve some of the filters (crop, rotate, flip and mirror) from the current filter chain into the extract. This is pretty useful combined with crop.lua. Note that you cannot copy video streams and apply filters at the same time.  
-`$codec` [string]: additional parameters, anything supported by ffmpeg goes.  
-`$output_directory` [string, optional]: the path of the created extract. Empty means the same directory as the input. Relative paths are relative to mpv's working directory, absolute ones work like you would expect.  
-`$output_format` [string, optional]: format of the output filename. Does basic interpolation on the following variables: $f, $s, $e, $d, $n which respectively represent input filename, start timestamp, end timestamp, duration and an incrementing number in case of conflicts. Default is `$f_$n`. The extension is automatically appended.  
+$PROFILE refers to a `lua-settings/$PROFILE.conf` file. A profile may define the following variables:
+
+```
+# the container of the output, so webm/mkv/mp4/...
+# empty by default
+container=
+
+# if yes, only encode the currently active tracks
+# for example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract
+# no by default
+only_active_tracks=no
+
+# whether to preserve some of the applied filters (crop, rotate, flip and mirror) into the extract
+# this is pretty useful in combination with crop.lua
+# note that you cannot copy video streams and apply filters at the same time
+# yes by default
+preserve_filters=yes
+
+# additional parameters passed to ffmpeg
+# empty by default
+codec=
+
+# format of the output filename
+# Does basic interpolation on the following variables: $f, $s, $e, $d, $p, $n which respectively represent 
+# input filename, start timestamp, end timestamp, duration, profile name and an incrementing number in case of conflicts
+# $f_$n by default
+output_format=$f_$n
+
+# the directory in which to create the extract
+# empty means the same directory as the input file
+# relative paths are relative to mpv's working directory, absolute ones work like you would expect
+# empty by default
+output_directory=
+
+# if yes, the ffmpeg process will run detached from mpv and we won't know if it succeeded or not
+# if no, we know the result of calling ffmpeg, but we can only encode one extract at a time and mpv will block on exit
+# yes by default
+detached=yes
+```
 
 ## Examples
 
-Encode a webm for your favorite imageboard:
+Profile for making webms your favorite imageboard: `~/.config/mpv/lua-settings/encode_webm.conf`:
 ```
-e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k"
+container=webm
+only_active_tracks=no
+preserve_filters=yes
+codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
+output_directory=~/webms/
 ```
-Slice a video without reencoding (the extract will be snapped to keyframes, watch out):
+Profile for slicing a video without reencoding it `~/.config/mpv/lua-settings/encode_slice.conf`:
 ```
-e script-message-to encode set_timestamp mkv false false "-map 0 -c copy"
+container=mkv
+only_active_tracks=no
+preserve_filters=no
+codec=-c copy
 ```
-
-## Static configuration
-
-The following setting can be tweaked in your `lua-settings/encode.conf`:
+Relevant `~/.config/mpv/input.conf`:
 ```
-# if yes, the ffmpeg process will be detached and we won't know if it
-# succeeded or not and we can stop mpv at any time
-# if no, we know the result of calling ffmpeg, but we can only encode
-# one extract at a time and mpv will block on exit
-detached=[yes/no]
+e script-message-to encode set_timestamp encode_webm
+E script-message-to encode set_timestamp encode_slice
 ```
 
 # drag-to-pan.lua
@@ -89,8 +122,8 @@ Some commands that are too simple to warrant their own script. See example bindi
 c script-message-to crop start-crop
 
 # encode.lua
-e script-message-to encode set_timestamp webm false true "-an -sn -c:v libvpx -crf 10 -b:v 1000k" "./"
-E script-message-to encode set_timestamp mkv false false "-c copy" "./"
+e script-message-to encode set_timestamp encode_webm
+E script-message-to encode set_timestamp encode_slice
 alt+e script-message-to encode clear_timestamp
 
 # drag-to-pan.lua

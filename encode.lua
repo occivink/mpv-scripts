@@ -2,15 +2,6 @@ local start_timestamp = nil
 local utils = require "mp.utils"
 local options = require "mp.options"
 
-local o = {
-    -- if true, the ffmpeg process will be detached and we won't know if it
-    -- succeeded or not and we can stop mpv at any time
-    -- if false, we know the result of calling ffmpeg, but we can only encode
-    -- one extract at a time and mpv will block on exit
-    detached = false,
-}
-options.read_options(o)
-
 function append_table(lhs, rhs)
     for i = 1,#rhs do
         lhs[#lhs+1] = rhs[i]
@@ -28,8 +19,11 @@ function file_exists(name)
     end
 end
 
-function get_output_string(dir, format, input, from, to)
+function get_output_string(dir, format, input, from, to, profile)
     local res = utils.readdir(dir)
+    if not res then
+        return nil
+    end
     local files = {}
     for _, f in ipairs(res) do
         files[f] = true
@@ -39,6 +33,7 @@ function get_output_string(dir, format, input, from, to)
     output = string.gsub(output, "$s", seconds_to_time_string(from, true))
     output = string.gsub(output, "$e", seconds_to_time_string(to, true))
     output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
+    output = string.gsub(output, "$p", profile)
     if not string.find(output, "$n") then
         if not files[output] then
             return output
@@ -113,19 +108,19 @@ function seconds_to_time_string(seconds, full)
     return ret
 end
 
-function start_encoding(path, from, to, settings)
+function start_encoding(input_path, from, to, settings)
     local filename = mp.get_property("filename/no-ext") or "encode"
 
     local args = {
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
-        "-i", path,
+        "-i", input_path,
         "-ss", seconds_to_time_string(from, false),
         "-to", seconds_to_time_string(to, false)
     }
 
     -- map currently playing channels
-    if settings.only_active_tracks == "true" then
+    if settings.only_active_tracks then
         for _, t in ipairs(get_active_tracks()) do
             args = append_table(args, { "-map", t })
         end
@@ -134,7 +129,7 @@ function start_encoding(path, from, to, settings)
     end
 
     -- apply some of the video filters currently in the chain
-    if settings.preserve_filters == "true" then
+    if settings.preserve_filters then
         local video_filters = get_video_filters_string()
         if video_filters ~= "" then
             args = append_table(args, {
@@ -149,20 +144,22 @@ function start_encoding(path, from, to, settings)
     end
 
     -- path of the output
-    local directory = settings.output_directory
-    if directory == "" then
-        directory, _ = utils.split_path(path)
+    local output_directory = settings.output_directory
+    if output_directory == "" then
+        output_directory, _ = utils.split_path(input_path)
+    else
+        output_directory = string.gsub(output_directory, "^~", os.getenv("HOME"))
     end
-    output = string.format("%s.%s", settings.output_format, settings.container)
-    local output = get_output_string(directory, output, filename, from, to)
-    if not output then
-        mp.osd_message("Invalid filename")
+    local output_name = string.format("%s.%s", settings.output_format, settings.container)
+    output_name = get_output_string(output_directory, output_name, filename, from, to, settings.profile)
+    if not output_name then
+        mp.osd_message("Invalid path " .. output_directory)
         return
     end
-    args[#args + 1] = utils.join_path(directory, output)
+    args[#args + 1] = utils.join_path(output_directory, output_name)
 
     print(table.concat(args, " "))
-    if o.detached then
+    if settings.detached then
         utils.subprocess_detached({ args = args })
     else
         local res = utils.subprocess({ args = args, max_size = 0, cancellable = false })
@@ -174,7 +171,7 @@ function start_encoding(path, from, to, settings)
     end
 end
 
-function set_timestamp(container, only_active_tracks, preserve_filters, codec, output_directory, output_format)
+function set_timestamp(profile)
     local path = mp.get_property("path")
     if not path then
         mp.osd_message("No file currently playing")
@@ -198,14 +195,17 @@ function set_timestamp(container, only_active_tracks, preserve_filters, codec, o
             , seconds_to_time_string(start_timestamp, false)
             , seconds_to_time_string(current_timestamp, false)
         ))
-        local settings = {
-            container = container,
-            only_active_tracks = only_active_tracks,
-            preserve_filters = preserve_filters,
-            codec = codec,
-            output_directory = output_path or "",
-            output_format = output_format or "$f_$n"
+       local settings = {
+            detached = true,
+            container = "mkv",
+            only_active_tracks = false,
+            preserve_filters = true,
+            codec = "",
+            output_format = "$f_$n",
+            output_directory = "",
         }
+        options.read_options(settings, profile)
+        settings.profile = profile
         start_encoding(path, start_timestamp, current_timestamp, settings)
         start_timestamp = nil
     end
