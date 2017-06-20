@@ -40,6 +40,10 @@ only_active_tracks=no
 # yes by default
 preserve_filters=yes
 
+# apply another filter after the ones from the previous option if any 
+# empty by default
+append_filter=
+
 # additional parameters passed to ffmpeg
 # empty by default
 codec=
@@ -69,6 +73,8 @@ Profile for making webms your favorite imageboard: `~/.config/mpv/lua-settings/e
 container=webm
 only_active_tracks=no
 preserve_filters=yes
+# downscale if the extract's width is bigger than 700px
+append_filter=scale=iw*min(1\,min(700/iw\,700/ih)):-1
 codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
 output_directory=~/webms/
 ```

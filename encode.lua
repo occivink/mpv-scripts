@@ -51,7 +51,7 @@ function get_output_string(dir, format, input, from, to, profile)
     end
 end
 
-function get_video_filters_string()
+function get_video_filters()
     local filters = {}
     local vf_table = mp.get_property_native("vf")
     for _, vf in ipairs(vf_table) do
@@ -77,7 +77,7 @@ function get_video_filters_string()
         end
         filters[#filters + 1] = filter
     end
-    return table.concat(filters, ",")
+    return filters
 end
 
 function get_active_tracks()
@@ -129,13 +129,17 @@ function start_encoding(input_path, from, to, settings)
     end
 
     -- apply some of the video filters currently in the chain
+    local filters = {}
     if settings.preserve_filters then
-        local video_filters = get_video_filters_string()
-        if video_filters ~= "" then
-            args = append_table(args, {
-                "-filter:v", video_filters,
-            })
-        end
+        filters = append_table(filters, get_video_filters())
+    end
+    if settings.append_filter ~= "" then
+        filters[#filters + 1] = settings.append_filter
+    end
+    if #filters > 0 then
+        args = append_table(args, {
+            "-filter:v", table.concat(filters, ",")
+        })
     end
 
     -- split the user-passed settings on whitespace
@@ -200,6 +204,7 @@ function set_timestamp(profile)
             container = "mkv",
             only_active_tracks = false,
             preserve_filters = true,
+            append_filter = "",
             codec = "",
             output_format = "$f_$n",
             output_directory = "",
