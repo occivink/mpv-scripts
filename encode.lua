@@ -199,7 +199,10 @@ function set_timestamp(profile)
             , seconds_to_time_string(start_timestamp, false)
             , seconds_to_time_string(current_timestamp, false)
         ))
-       local settings = {
+        -- include the current frame into the extract
+        local fps = mp.get_property_number("container-fps")
+        current_timestamp = current_timestamp + 1 / fps / 2
+        local settings = {
             detached = true,
             container = "mkv",
             only_active_tracks = false,
