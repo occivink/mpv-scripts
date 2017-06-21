@@ -64,6 +64,10 @@ output_directory=
 # if no, we know the result of calling ffmpeg, but we can only encode one extract at a time and mpv will block on exit
 # yes by default
 detached=yes
+
+# if yes, print the ffmpeg call before executing it
+# yes by default
+print=yes
 ```
 
 ## Examples

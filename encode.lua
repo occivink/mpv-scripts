@@ -109,8 +109,6 @@ function seconds_to_time_string(seconds, full)
 end
 
 function start_encoding(input_path, from, to, settings)
-    local filename = mp.get_property("filename/no-ext") or "encode"
-
     local args = {
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
@@ -155,14 +153,32 @@ function start_encoding(input_path, from, to, settings)
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME"))
     end
     local output_name = string.format("%s.%s", settings.output_format, settings.container)
-    output_name = get_output_string(output_directory, output_name, filename, from, to, settings.profile)
+    local input_name = mp.get_property("filename/no-ext") or "encode"
+    output_name = get_output_string(output_directory, output_name, input_name, from, to, settings.profile)
     if not output_name then
         mp.osd_message("Invalid path " .. output_directory)
         return
     end
     args[#args + 1] = utils.join_path(output_directory, output_name)
 
-    print(table.concat(args, " "))
+    if settings.print then
+        local o = ""
+        -- fuck this is ugly
+        for i = 1, #args do
+            local fmt = ""
+            if i == 1 then
+                fmt = "%s%s"
+            elseif i >= 2 and i <= 4 then
+                fmt = "%s"
+            elseif args[i-1] == "-i" or i == #args or args[i-1] == "-filter:v" then
+                fmt = "%s \"%s\""
+            else
+                fmt = "%s %s"
+            end
+            o = string.format(fmt, o, args[i])
+        end
+        print(o)
+    end
     if settings.detached then
         utils.subprocess_detached({ args = args })
     else
@@ -211,6 +227,7 @@ function set_timestamp(profile)
             codec = "",
             output_format = "$f_$n",
             output_directory = "",
+            print = true,
         }
         options.read_options(settings, profile)
         settings.profile = profile
