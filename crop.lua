@@ -22,7 +22,11 @@ function get_video_dimensions()
         w, h = h,w
         dw, dh = dh, dw
     end
-    _video_dimensions = {}
+    _video_dimensions = {
+        top_left = {},
+        bottom_right = {},
+        ratios = {},
+    }
     if keep_aspect then
         local unscaled = mp.get_property_native("video-unscaled")
         local panscan = mp.get_property_number("panscan")
@@ -75,19 +79,19 @@ function get_video_dimensions()
 
         local align_x = mp.get_property_number("video-align-x")
         local pan_x = mp.get_property_number("video-pan-x")
-        _video_dimensions.x1, _video_dimensions.x2 = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
+        _video_dimensions.top_left.x, _video_dimensions.bottom_right.x = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
 
         local align_y = mp.get_property_number("video-align-y")
         local pan_y = mp.get_property_number("video-pan-y")
-        _video_dimensions.y1, _video_dimensions.y2 = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
+        _video_dimensions.top_left.y, _video_dimensions.bottom_right.y = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
     else
-        _video_dimensions.x1 = 0
-        _video_dimensions.x2 = window_w
-        _video_dimensions.y1 = 0
-        _video_dimensions.y2 = window_h
+        _video_dimensions.top_left.x = 0
+        _video_dimensions.bottom_right.x = window_w
+        _video_dimensions.top_left.y = 0
+        _video_dimensions.bottom_right.y = window_h
     end
-    _video_dimensions.rw = w / (_video_dimensions.x2 - _video_dimensions.x1)
-    _video_dimensions.rh = h / (_video_dimensions.y2 - _video_dimensions.y1)
+    _video_dimensions.ratios.w = w / (_video_dimensions.bottom_right.x - _video_dimensions.top_left.x)
+    _video_dimensions.ratios.h = h / (_video_dimensions.bottom_right.y - _video_dimensions.top_left.y)
     return _video_dimensions
 end
 
@@ -108,49 +112,49 @@ function clamp(low, value, high)
     end
 end
 
-function clamp_to_screen(point, video_dim)
+function clamp_point(top_left, point, bottom_right)
     return {
-        x = clamp(video_dim.x1, point.x, video_dim.x2),
-        y = clamp(video_dim.y1, point.y, video_dim.y2)
+        x = clamp(top_left.x, point.x, bottom_right.x),
+        y = clamp(top_left.y, point.y, bottom_right.y)
     }
 end
 
 function screen_to_video(point, video_dim)
     return {
-        x = math.floor(video_dim.rw * (point.x - video_dim.x1) + 0.5),
-        y = math.floor(video_dim.rh * (point.y - video_dim.y1) + 0.5)
+        x = math.floor(video_dim.ratios.w * (point.x - video_dim.top_left.x) + 0.5),
+        y = math.floor(video_dim.ratios.h * (point.y - video_dim.top_left.y) + 0.5)
     }
 end
 
 function video_to_screen(point, video_dim)
     return {
-        x = math.floor(point.x / video_dim.rw + video_dim.x1 + 0.5),
-        y = math.floor(point.y / video_dim.rh + video_dim.y1 + 0.5)
+        x = math.floor(point.x / video_dim.ratios.w + video_dim.top_left.x + 0.5),
+        y = math.floor(point.y / video_dim.ratios.h + video_dim.top_left.y + 0.5)
     }
 end
 
-function draw_shade(ass, top_left_corner, bottom_right_corner, video_dim)
+function draw_shade(ass, unshaded, video)
     ass:new_event()
     ass:pos(0, 0)
     ass:append('{\\bord0}')
     ass:append('{\\shad0}')
     ass:append('{\\c&H000000&}')
     ass:append('{\\alpha&H77}')
-    local c1, c2 = top_left_corner, bottom_right_corner
-    local v = video_dim
-    --   v.x1   c1.x   c2.x  v.x2
-    -- v.y1+-----+------------+
+    local c1, c2 = unshaded.top_left, unshaded.bottom_right
+    local v = video
+    --          c1.x   c2.x
+    --     +-----+------------+
     --     |     |     ur     |
     -- c1.y| ul  +-------+----+
     --     |     |       |    |
     -- c2.y+-----+-------+ lr |
     --     |     ll      |    |
-    -- v.y2+-------------+----+
+    --     +-------------+----+
     ass:draw_start()
-    ass:rect_cw(v.x1, v.y1, c1.x, c2.y) -- ul
-    ass:rect_cw(c1.x, v.y1, v.x2, c1.y) -- ur
-    ass:rect_cw(v.x1, c2.y, c2.x, v.y2) -- ll
-    ass:rect_cw(c2.x, c1.y, v.x2, v.y2) -- lr
+    ass:rect_cw(v.top_left.x, v.top_left.y, c1.x, c2.y) -- ul
+    ass:rect_cw(c1.x, v.top_left.y, v.bottom_right.x, c1.y) -- ur
+    ass:rect_cw(v.top_left.x, c2.y, c2.x, v.bottom_right.y) -- ll
+    ass:rect_cw(c2.x, c1.y, v.bottom_right.x, v.bottom_right.y) -- lr
     ass:draw_stop()
     -- also possible to draw a rect over the whole video
     -- and \iclip it in the middle, but seemingy slower
@@ -196,24 +200,28 @@ function draw_crop_zone()
             cancel_crop()
             return
         end
-        
+
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
         local cursor_pos = {}
         cursor_pos.x, cursor_pos.y = mp.get_mouse_pos()
-        cursor_pos = clamp_to_screen(cursor_pos, video_dim)
+        cursor_pos = clamp_point(video_dim.top_left, cursor_pos, video_dim.bottom_right)
         local ass = assdraw.ass_new()
-        
+
         if crop_first_corner then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
-            local c1, c2 = sort_corners(first_corner, cursor_pos)
+            local unshaded = {}
+            unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, cursor_pos)
             -- don't draw shade over non-visible video parts
-            local video_shown = {}
-            video_shown.x1 = clamp(0, video_dim.x1, window_size.w)
-            video_shown.x2 = clamp(0, video_dim.x2, window_size.w)
-            video_shown.y1 = clamp(0, video_dim.y1, window_size.h)
-            video_shown.y2 = clamp(0, video_dim.y2, window_size.h)
-            draw_shade(ass, c1, c2, video_shown)
+            local window = {
+                top_left = { x = 0, y = 0 },
+                bottom_right = { x = window_size.w, y = window_size.h },
+            }
+            local video_visible = {
+                top_left = clamp_point(window.top_left, video_dim.top_left, window.bottom_right),
+                bottom_right = clamp_point(window.top_left, video_dim.bottom_right, window.bottom_right),
+            }
+            draw_shade(ass, unshaded, video_visible)
         end
 
         draw_crosshair(ass, cursor_pos, window_size)
@@ -255,7 +263,7 @@ function update_crop_zone_state()
     end
     local second_corner = {}
     second_corner.x, second_corner.y = mp.get_mouse_pos()
-    second_corner = clamp_to_screen(second_corner, dim)
+    second_corner = clamp_point(dim.top_left, second_corner, dim.bottom_right)
     second_corner = screen_to_video(second_corner, dim)
     if crop_first_corner == nil then
         crop_first_corner = second_corner
