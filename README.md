@@ -77,8 +77,9 @@ Profile for making webms your favorite imageboard: `~/.config/mpv/lua-settings/e
 container=webm
 only_active_tracks=no
 preserve_filters=yes
-# downscale if the extract's width is bigger than 700px
-append_filter=scale=iw*min(1\,min(700/iw\,700/ih)):-1
+# downscale if the extract has more pixels than 960x540
+append_filter=scale=2*trunc(iw/max(1\,sqrt((iw*ih)/(960*540)))/2):-2
+# if somebody knows a better way to coerce the vp8 encoder into producing non-garbage I'd like to know
 codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
 output_directory=~/webms/
 ```
