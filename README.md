@@ -2,6 +2,8 @@
 
 These scripts are completely independent. Some of them work together nicely (e.g. `crop.lua` and `encode.lua`) but that's it. Just copy whichever scripts you're interested in to your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for installation instructions).  
 
+See [this video](https://vimeo.com/222879214) for a quick overview of what some of these scripts do.  
+
 ## Bindings
 
 None of these scripts come with default bindings. Instead, you're encouraged to set your own in `input.conf`. See below for my own bindings as a sample.
