@@ -116,23 +116,14 @@ Holds an internal history for timestamps that have been previously navigated, ac
 
 # misc.lua
 
-Some commands that are too simple to warrant their own script. See example bindings.
-
-| command | argument(s) | effect |
-| --- | --- | --- |
-| rotate | [90/-90] | append a "rotate" filter to the filter chain, clockwise or counter-clockwise |
-| toggle-filter | [flip/mirror/...] | toggle the specified filter |
-| clear-filters |  | clear all filters from the chain and push them on the undo stack |
-| remove-last-filter |  | remove the last filter from the chain and push it on the undo stack |
-| undo-filter-removal |  | pops the top filter from the undo stack back into the filter chain |
-| align | [-1..1] [-1..1] | visually align the video to the window |
-| ab-loop | [jump/set/clear] [a/b] | manipulate the timestamps of the ab-loop feature |
+Some commands that are too simple to warrant their own script. Have a look at the source in case you're curious.  
 
 # Sample input.conf
 
 ```
 # crop.lua
 c script-message-to crop start-crop
+d vf del -1
 
 # encode.lua
 e script-message-to encode set_timestamp encode_webm
@@ -145,26 +136,5 @@ MOUSE_BTN0 script-binding drag_to_pan/start-pan
 
 # seek-to.lua
 t script-message-to seek_to toggle-seeker
-
-# misc.lua
-r     script-message-to misc rotate 90
-alt+r script-message-to misc rotate -90
-h     script-message-to misc toggle flip
-v     script-message-to misc toggle mirror
-d     script-message-to misc remove-last-filter
-D     script-message-to misc clear-filters
-alt+d script-message-to misc undo-filter-removal
-
-shift+ctrl+left  script-message-to misc align 1 ""
-shift+ctrl+right script-message-to misc align -1 ""
-shift+ctrl+up    script-message-to misc align "" 1
-shift+ctrl+down  script-message-to misc align "" -1
-
-k     script-message-to misc ab-loop jump a
-l     script-message-to misc ab-loop jump b
-K     script-message-to misc ab-loop set a
-L     script-message-to misc ab-loop set b
-alt+k script-message-to misc ab-loop clear a
-alt+l script-message-to misc ab-loop clear b
 ```
 
