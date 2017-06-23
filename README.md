@@ -24,12 +24,12 @@ e script-message-to encode set_timestamp $PROFILE
 alt+e script-message-to encode clear_timestamp
 ```
 
-$PROFILE refers to a `lua-settings/$PROFILE.conf` file. A profile may define the following variables:
+$PROFILE refers to a `lua-settings/$PROFILE.conf` file. Without any profile, a webm is generated (see defaults). A profile may define the following variables:
 
 ```
 # the container of the output, so webm/mkv/mp4/...
-# empty by default
-container=
+# webm by default
+container=webm
 
 # if yes, only encode the currently active tracks
 # for example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract
@@ -47,8 +47,8 @@ preserve_filters=yes
 append_filter=
 
 # additional parameters passed to ffmpeg
-# empty by default
-codec=
+# encode in vp8 by default
+codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
 
 # format of the output filename
 # Does basic interpolation on the following variables: $f, $s, $e, $d, $p, $n which respectively represent 
@@ -126,7 +126,7 @@ c script-message-to crop start-crop
 d vf del -1
 
 # encode.lua
-e script-message-to encode set_timestamp encode_webm
+e script-message-to encode set_timestamp
 E script-message-to encode set_timestamp encode_slice
 alt+e script-message-to encode clear_timestamp
 

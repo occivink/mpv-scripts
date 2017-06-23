@@ -220,17 +220,21 @@ function set_timestamp(profile)
         current_timestamp = current_timestamp + 1 / fps / 2
         local settings = {
             detached = true,
-            container = "mkv",
+            container = "webm",
             only_active_tracks = false,
             preserve_filters = true,
             append_filter = "",
-            codec = "",
+            codec = "-an -sn -c:v libvpx -crf 10 -b:v 1000k",
             output_format = "$f_$n",
             output_directory = "",
             print = true,
         }
-        options.read_options(settings, profile)
-        settings.profile = profile
+        if profile then
+            options.read_options(settings, profile)
+            settings.profile = profile
+        else
+            settings.profile = "default"
+        end
         start_encoding(path, start_timestamp, current_timestamp, settings)
         start_timestamp = nil
     end
