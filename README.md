@@ -20,55 +20,46 @@ You can use a binding such as `d vf del -1` to undo the last crop.
 Make an extract of the currently playing video using `ffmpeg`. Press the binding once to set the beginning of the extract. Press a second time to set the end and start encoding.  
 This script defines two commands that you can bind in your `input.conf` like so:
 ```
-e script-message-to encode set_timestamp $PROFILE
+e script-message-to encode set_timestamp PROFILE
 alt+e script-message-to encode clear_timestamp
 ```
 
-$PROFILE refers to a `lua-settings/$PROFILE.conf` file. Without any profile, a webm is generated (see defaults). A profile may define the following variables:
+PROFILE refers to a `lua-settings/PROFILE.conf` file. Without any profile, a webm is generated (see defaults). A profile may define the following variables:
 
 ```
 # the container of the output, so webm/mkv/mp4/...
-# webm by default
 container=webm
 
 # if yes, only encode the currently active tracks
 # for example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract
-# no by default
 only_active_tracks=no
 
 # whether to preserve some of the applied filters (crop, rotate, flip and mirror) into the extract
 # this is pretty useful in combination with crop.lua
 # note that you cannot copy video streams and apply filters at the same time
-# yes by default
 preserve_filters=yes
 
 # apply another filter after the ones from the previous option if any 
-# empty by default
 append_filter=
 
 # additional parameters passed to ffmpeg
-# encode in vp8 by default
 codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
 
 # format of the output filename
 # Does basic interpolation on the following variables: $f, $s, $e, $d, $p, $n which respectively represent 
 # input filename, start timestamp, end timestamp, duration, profile name and an incrementing number in case of conflicts
-# $f_$n by default
 output_format=$f_$n
 
 # the directory in which to create the extract
 # empty means the same directory as the input file
 # relative paths are relative to mpv's working directory, absolute ones work like you would expect
-# empty by default
 output_directory=
 
 # if yes, the ffmpeg process will run detached from mpv and we won't know if it succeeded or not
 # if no, we know the result of calling ffmpeg, but we can only encode one extract at a time and mpv will block on exit
-# yes by default
 detached=yes
 
 # if yes, print the ffmpeg call before executing it
-# yes by default
 print=yes
 ```
 
@@ -94,9 +85,16 @@ codec=-c copy
 ```
 Relevant `~/.config/mpv/input.conf`:
 ```
-e script-message-to encode set_timestamp encode_webm
-E script-message-to encode set_timestamp encode_slice
+e script-message-to encode set-timestamp encode_webm
+E script-message-to encode set-timestamp encode_slice
 ```
+
+# seek-to.lua
+
+Seek to an absolute position in the current video by typing its timestamp.
+
+Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
+Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
 
 # drag-to-pan.lua
 
@@ -106,13 +104,6 @@ The script is intended to be used with a mouse binding, such as `MOUSE_BTN0` but
 Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
 
 Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something. There's not much we can do about this script-side.
-
-# seek-to.lua
-
-Seek to an absolute position in the current video by typing its timestamp.
-
-Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
-Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
 
 # misc.lua
 
@@ -126,15 +117,16 @@ c script-message-to crop start-crop
 d vf del -1
 
 # encode.lua
-e script-message-to encode set_timestamp
-E script-message-to encode set_timestamp encode_slice
-alt+e script-message-to encode clear_timestamp
+e script-message-to encode set-timestamp
+E script-message-to encode set-timestamp encode_slice
+alt+e script-message-to encode clear-timestamp
+
+# seek-to.lua
+t script-message-to seek_to toggle-seeker
 
 # drag-to-pan.lua
 # this binding is special because we need to monitor up and down events for this key
 MOUSE_BTN0 script-binding drag_to_pan/start-pan
 
-# seek-to.lua
-t script-message-to seek_to toggle-seeker
 ```
 

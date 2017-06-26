@@ -240,5 +240,5 @@ function set_timestamp(profile)
     end
 end
 
-mp.add_key_binding(nil, "set_timestamp", set_timestamp)
-mp.add_key_binding(nil, "clear_timestamp", function() start_timestamp = nil end)
+mp.add_key_binding(nil, "set-timestamp", set_timestamp)
+mp.add_key_binding(nil, "clear-timestamp", function() start_timestamp = nil end)
