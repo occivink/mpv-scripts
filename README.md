@@ -18,16 +18,16 @@ You can use a binding such as `d vf del -1` to undo the last crop.
 # encode.lua
 
 Make an extract of the currently playing video using `ffmpeg`. Press the binding once to set the beginning of the extract. Press a second time to set the end and start encoding.  
-This script defines two commands that you can bind in your `input.conf` like so:
+This script defines a command that you can bind in your `input.conf` like so:
 ```
-e script-message-to encode set_timestamp PROFILE
-alt+e script-message-to encode clear_timestamp
+e script-message-to encode set_timestamp
+E script-message-to encode set_timestamp PROFILE
 ```
 
-PROFILE refers to a `lua-settings/PROFILE.conf` file. Without any profile, a webm is generated (see defaults). A profile may define the following variables:
+PROFILE refers to a `lua-settings/PROFILE.conf` file. Without any profile, a webm is generated (see defaults below). A profile may define the following variables:
 
 ```
-# the container of the output, so webm/mkv/mp4/...
+# the container of the output, so webm/mkv/mp4...
 container=webm
 
 # if yes, only encode the currently active tracks
@@ -119,7 +119,6 @@ d vf del -1
 # encode.lua
 e script-message-to encode set-timestamp
 E script-message-to encode set-timestamp encode_slice
-alt+e script-message-to encode clear-timestamp
 
 # seek-to.lua
 t script-message-to seek_to toggle-seeker

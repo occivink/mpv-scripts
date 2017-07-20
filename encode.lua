@@ -1,6 +1,8 @@
 local start_timestamp = nil
 local utils = require "mp.utils"
 local options = require "mp.options"
+local timer = nil
+local timer_duration = 3
 
 function append_table(lhs, rhs)
     for i = 1,#rhs do
@@ -191,6 +193,13 @@ function start_encoding(input_path, from, to, settings)
     end
 end
 
+function clear_timestamp()
+    timer:kill()
+    start_timestamp = nil
+    mp.remove_key_binding("encode-ESC")
+    mp.osd_message("", 0)
+end
+
 function set_timestamp(profile)
     local path = mp.get_property("path")
     if not path then
@@ -204,20 +213,27 @@ function set_timestamp(profile)
 
     if start_timestamp == nil then
         start_timestamp = mp.get_property_number("time-pos")
-        mp.osd_message("Encoding from " .. seconds_to_time_string(start_timestamp, false))
+        msg = function()
+            mp.osd_message("encode: waiting for end timestamp", timer_duration)
+        end
+        msg()
+        timer = mp.add_periodic_timer(timer_duration, msg)
+        mp.add_forced_key_binding("ESC", "encode-ESC", clear_timestamp)
     else
-        local current_timestamp = mp.get_property_number("time-pos")
-        if current_timestamp <= start_timestamp then
+        local from = start_timestamp
+        local to = mp.get_property_number("time-pos")
+        if to <= from then
             mp.osd_message("Second timestamp cannot be before the first")
             return
         end
-        mp.osd_message(string.format("Started encoding from %s to %s"
-            , seconds_to_time_string(start_timestamp, false)
-            , seconds_to_time_string(current_timestamp, false)
-        ))
+        clear_timestamp()
+        mp.osd_message(string.format("Encoding from %s to %s"
+            , seconds_to_time_string(from, false)
+            , seconds_to_time_string(to, false)
+        ), timer_duration)
         -- include the current frame into the extract
         local fps = mp.get_property_number("container-fps")
-        current_timestamp = current_timestamp + 1 / fps / 2
+        to = to + 1 / fps / 2
         local settings = {
             detached = true,
             container = "webm",
@@ -235,10 +251,9 @@ function set_timestamp(profile)
         else
             settings.profile = "default"
         end
-        start_encoding(path, start_timestamp, current_timestamp, settings)
-        start_timestamp = nil
+        start_encoding(path, from, to, settings)
     end
 end
 
 mp.add_key_binding(nil, "set-timestamp", set_timestamp)
-mp.add_key_binding(nil, "clear-timestamp", function() start_timestamp = nil end)
+mp.add_key_binding(nil, "clear-timestamp", clear_timestamp)
