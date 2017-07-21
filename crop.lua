@@ -299,6 +299,7 @@ function start_crop()
         "osd-width",
         "osd-height",
     }
+    mp.register_idle(draw_crop_zone)
     for _, p in ipairs(properties) do
         mp.observe_property(p, "native", reset_crop)
     end
@@ -311,8 +312,8 @@ function cancel_crop()
     mp.remove_key_binding("crop-mouse-click")
     mp.remove_key_binding("crop-esc")
     mp.unobserve_property(reset_crop)
+    mp.unregister_idle(draw_crop_zone)
     mp.set_osd_ass(1280, 720, '')
 end
 
-mp.register_idle(draw_crop_zone)
 mp.add_key_binding(nil, "start-crop", start_crop)
