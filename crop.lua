@@ -316,4 +316,22 @@ function cancel_crop()
     mp.set_osd_ass(1280, 720, '')
 end
 
+function toggle_crop()
+    local vf_table = mp.get_property_native("vf")
+    if #vf_table > 0 then
+        for i = #vf_table, 1, -1 do
+            if vf_table[i].name == "crop" then
+                for j = i, #vf_table-1 do
+                    vf_table[j] = vf_table[j+1]
+                end
+                vf_table[#vf_table] = nil
+                mp.set_property_native("vf", vf_table)
+                return
+            end
+        end
+    end
+    start_crop()
+end
+
 mp.add_key_binding(nil, "start-crop", start_crop)
+mp.add_key_binding(nil, "toggle-crop", toggle_crop)
