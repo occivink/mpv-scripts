@@ -1,8 +1,9 @@
-local start_timestamp = nil
 local utils = require "mp.utils"
 local options = require "mp.options"
+
+local start_timestamp = nil
 local timer = nil
-local timer_duration = 3
+local timer_duration = 2
 
 function append_table(lhs, rhs)
     for i = 1,#rhs do
@@ -211,10 +212,13 @@ function set_timestamp(profile)
         return
     end
 
-    if start_timestamp == nil then
+    if not start_timestamp then
         start_timestamp = mp.get_property_number("time-pos")
-        msg = function()
-            mp.osd_message("encode: waiting for end timestamp", timer_duration)
+        local msg = function()
+            mp.osd_message(
+                string.format("encode [%s]: waiting for end timestamp", profile or "default"),
+                timer_duration
+            )
         end
         msg()
         timer = mp.add_periodic_timer(timer_duration, msg)
@@ -223,7 +227,9 @@ function set_timestamp(profile)
         local from = start_timestamp
         local to = mp.get_property_number("time-pos")
         if to <= from then
-            mp.osd_message("Second timestamp cannot be before the first")
+            mp.osd_message("Second timestamp cannot be before the first", timer_duration)
+            timer:kill()
+            timer:resume()
             return
         end
         clear_timestamp()
@@ -256,4 +262,3 @@ function set_timestamp(profile)
 end
 
 mp.add_key_binding(nil, "set-timestamp", set_timestamp)
-mp.add_key_binding(nil, "clear-timestamp", clear_timestamp)

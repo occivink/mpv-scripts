@@ -89,7 +89,8 @@ end
 
 function click_handler(table)
     if table["event"] == "down" then
-        if not mp.get_property("path") or mp.get_property("video") == "no" then return end
+        v = mp.get_property("video")
+        if not v or v == "" or v == "no" then return end
         compute_video_dimensions()
         mp.register_idle(adjust_pan)
         mouse_pos_origin.x, mouse_pos_origin.y = mp.get_mouse_pos()

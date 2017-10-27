@@ -19,7 +19,7 @@ local timer = nil
 local timer_duration = 3
 
 function show_seeker()
-    local prepend_char = { '', '', ':', '', ':', '', '.', '', ''}
+    local prepend_char = {'','',':','',':','','.','',''}
     local str = ''
     for i = 1, 9 do
         str = str .. prepend_char[i]
@@ -145,7 +145,6 @@ function set_active()
 end
 
 function set_inactive()
-    local sX, sY = mp.get_osd_size()
     mp.osd_message("")
     for key, _ in pairs(key_mappings) do
         mp.remove_key_binding("seek-to-"..key)
