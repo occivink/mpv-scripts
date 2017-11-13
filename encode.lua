@@ -207,8 +207,8 @@ function set_timestamp(profile)
         mp.osd_message("No file currently playing")
         return
     end
-    if not file_exists(path) then
-        mp.osd_message("Cannot encode streams")
+    if not mp.get_property_bool("seekable") then
+        mp.osd_message("Cannot encode non-seekable media")
         return
     end
 
@@ -256,6 +256,9 @@ function set_timestamp(profile)
             settings.profile = profile
         else
             settings.profile = "default"
+        end
+        if not file_exists(path) then
+            path = mp.get_property("stream-path")
         end
         start_encoding(path, from, to, settings)
     end
