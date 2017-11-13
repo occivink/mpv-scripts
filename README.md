@@ -46,8 +46,8 @@ append_filter=
 codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
 
 # format of the output filename
-# Does basic interpolation on the following variables: $f, $s, $e, $d, $p, $n which respectively represent 
-# input filename, start timestamp, end timestamp, duration, profile name and an incrementing number in case of conflicts
+# Does basic interpolation on the following variables: $f, $t, $s, $e, $d, $p, $n which respectively represent
+# input filename, title, start timestamp, end timestamp, duration, profile name and an incrementing number in case of conflicts
 output_format=$f_$n
 
 # the directory in which to create the extract

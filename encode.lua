@@ -22,7 +22,7 @@ function file_exists(name)
     end
 end
 
-function get_output_string(dir, format, input, from, to, profile)
+function get_output_string(dir, format, input, title, from, to, profile)
     local res = utils.readdir(dir)
     if not res then
         return nil
@@ -33,6 +33,7 @@ function get_output_string(dir, format, input, from, to, profile)
     end
     local output = format
     output = string.gsub(output, "$f", input)
+    output = string.gsub(output, "$t", title)
     output = string.gsub(output, "$s", seconds_to_time_string(from, true))
     output = string.gsub(output, "$e", seconds_to_time_string(to, true))
     output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
@@ -157,7 +158,8 @@ function start_encoding(input_path, from, to, settings)
     end
     local output_name = string.format("%s.%s", settings.output_format, settings.container)
     local input_name = mp.get_property("filename/no-ext") or "encode"
-    output_name = get_output_string(output_directory, output_name, input_name, from, to, settings.profile)
+    local title = mp.get_property("media-title")
+    output_name = get_output_string(output_directory, output_name, input_name, title, from, to, settings.profile)
     if not output_name then
         mp.osd_message("Invalid path " .. output_directory)
         return
