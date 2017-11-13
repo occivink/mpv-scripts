@@ -238,7 +238,7 @@ function set_timestamp(profile)
             , seconds_to_time_string(to, false)
         ), timer_duration)
         -- include the current frame into the extract
-        local fps = mp.get_property_number("container-fps")
+        local fps = mp.get_property_number("container-fps") or 30
         to = to + 1 / fps / 2
         local settings = {
             detached = true,
