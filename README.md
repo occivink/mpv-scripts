@@ -94,7 +94,7 @@ E script-message-to encode set-timestamp encode_slice
 Fills the black bars on the side of a video with a blurred copy of the edges of the video.
 
 The script defines a `toggle-blur` command that you can bind.  
-It can be configured via `lua-settings/blur-edges.conf` using the following properties:
+It can be configured via `lua-settings/blur_edges.conf` using the following properties:
 ```
 # these two properties control how blurry the content on the side is. Check the ffmpeg documentation of 'boxblur' for more details
 blur_radius=10
