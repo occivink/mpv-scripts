@@ -89,6 +89,24 @@ e script-message-to encode set-timestamp encode_webm
 E script-message-to encode set-timestamp encode_slice
 ```
 
+# blur-edges.lua
+
+Fills the black bars on the side of a video with a blurred copy of the edges of the video.
+
+The script defines a `toggle-blur` command that you can bind.  
+It can be configured via `lua-settings/blur-edges.conf` using the following properties:
+```
+# these two properties control how blurry the content on the side is. Check the ffmpeg documentation of 'boxblur' for more details
+blur_radius=10
+blur_power=10
+# if the effect should be applied as soon as there are black bars
+auto_apply=yes
+# the delay (in seconds) after which the effect should be applied. This is necessary as the filter must be reapplied every time the window is resized (which can be in very quick succession)
+reapply_delay=0.5
+```
+
+Still WIP so expect things to change.
+
 # seek-to.lua
 
 Seek to an absolute position in the current video by typing its timestamp.
@@ -119,6 +137,9 @@ d vf del -1
 # encode.lua
 e script-message-to encode set-timestamp
 E script-message-to encode set-timestamp encode_slice
+
+# blur-edges.lua
+b script-message-to blur_edges toggle-blur
 
 # seek-to.lua
 t script-message-to seek_to toggle-seeker
