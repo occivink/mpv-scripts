@@ -96,11 +96,15 @@ Fills the black bars on the side of a video with a blurred copy of the edges of 
 The script defines a `toggle-blur` command that you can bind.  
 It can be configured via `lua-settings/blur_edges.conf` using the following properties:
 ```
-# these two properties control how blurry the content on the side is. Check the ffmpeg documentation of 'boxblur' for more details
+# these two properties control the blurriness. Check the ffmpeg documentation of 'boxblur' for more details
 blur_radius=10
 blur_power=10
-# if the effect should be applied as soon as there are black bars
-auto_apply=yes
+# which black bars should be replaced by blurry video. Can be "all", "horizontal" or "vertical"
+mode=all
+# the minimum size of the black bars for the effect to be applied
+minimum_black_bar_size=3
+# if the effect should be applied automatically if there are black bars
+active=yes
 # the delay (in seconds) after which the effect should be applied. This is necessary as the filter must be reapplied every time the window is resized (which can be in very quick succession)
 reapply_delay=0.5
 ```

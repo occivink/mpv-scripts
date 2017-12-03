@@ -3,12 +3,14 @@ local options = require 'mp.options'
 local opts = {
     blur_radius = 10,
     blur_power = 10,
-    auto_apply = true,
+    minimum_black_bar_size = 3,
     mode = "all",
+    active = true,
     reapply_delay = 0.5,
 }
 options.read_options(opts)
 
+local active = opts.active
 local applied = false
 
 function set_lavfi_complex(filter)
@@ -25,6 +27,7 @@ function set_lavfi_complex(filter)
 end
 
 function set_blur()
+    if applied then return end
     if not mp.get_property("video-out-params") then return end
     local video_aspect = mp.get_property_number("video-aspect")
     local ww, wh = mp.get_osd_size()
@@ -52,7 +55,7 @@ function set_blur()
         crop_2 = string.format(crop_format, width, blur_size, "0", height - blur_size)
         stack_direction = "v"
     end
-    if blur_size < 2 then return end
+    if blur_size < math.max(1, opts.minimum_black_bar_size) then return end
     local lr = math.min(opts.blur_radius, math.floor(blur_size/2)-1)
     local cr = math.min(opts.blur_radius, math.floor(blur_size/4)-1)
     local blur = string.format("boxblur=lr=%i:lp=%i:cr=%i:cp=%i",
@@ -77,18 +80,35 @@ function unset_blur()
     applied = false
 end
 
-local timer = nil
-function reapply_blur()
+local reapplication_timer = mp.add_timeout(opts.reapply_delay, set_blur)
+reapplication_timer:kill()
+
+function reset_blur(k,v)
     unset_blur()
-    if timer then
-        timer:kill()
+    reapplication_timer:kill()
+    reapplication_timer:resume()
+end
+
+function toggle()
+    if active then
+        active = false
+        unset_blur()
+        mp.unobserve_property(reset_blur)
+    else
+        active = true
+        set_blur()
+        local properties = { "osd-width", "osd-height", "path" }
+        for _, p in ipairs(properties) do
+            mp.observe_property(p, "native", reset_blur)
+        end
     end
-    timer = mp.add_timeout(opts.reapply_delay, set_blur)
 end
 
-if opts.auto_apply then
-    mp.observe_property("osd-width", "native", reapply_blur)
-    mp.observe_property("osd-height", "native", reapply_blur)
+if active then
+    active = false
+    toggle()
 end
 
-mp.add_key_binding(nil, "toggle-blur", toggle_blur)
+mp.add_key_binding(nil, "toggle-blur", toggle)
+mp.add_key_binding(nil, "set-blur", set_blur)
+mp.add_key_binding(nil, "unset-blur", unset_blur)
