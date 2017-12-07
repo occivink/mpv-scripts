@@ -14,6 +14,7 @@ local active = opts.active
 local applied = false
 
 function set_lavfi_complex(filter)
+    if not filter and mp.get_property("lavfi-complex") == "" then return end
     local force_window = mp.get_property("force-window")
     local sub = mp.get_property("sub")
     mp.set_property("force-window", "yes")
