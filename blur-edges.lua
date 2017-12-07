@@ -25,6 +25,7 @@ function set_lavfi_complex(filter)
         mp.set_property("vid", "no")
         mp.set_property("lavfi-complex", filter)
     end
+    mp.set_property("sub", "no")
     mp.set_property("force-window", force_window)
     mp.set_property("sub", sub)
 end
