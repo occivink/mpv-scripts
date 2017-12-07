@@ -15,6 +15,7 @@ local applied = false
 
 function set_lavfi_complex(filter)
     local force_window = mp.get_property("force-window")
+    local sub = mp.get_property("sub")
     mp.set_property("force-window", "yes")
     if not filter then
         mp.set_property("lavfi-complex", "")
@@ -24,6 +25,7 @@ function set_lavfi_complex(filter)
         mp.set_property("lavfi-complex", filter)
     end
     mp.set_property("force-window", force_window)
+    mp.set_property("sub", sub)
 end
 
 function set_blur()
