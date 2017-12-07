@@ -47,12 +47,12 @@ function set_blur()
 
     local stack_direction, crop_1, crop_2, blur_size
     if  ww/wh > video_aspect then
-        blur_size = math.floor(((ww/wh)*height/par-width)/2)
+        blur_size = math.min(math.floor(((ww/wh)*height/par-width)/2), width/2)
         crop_1 = string.format(crop_format, blur_size, height, "0", "0")
         crop_2 = string.format(crop_format, blur_size, height, width - blur_size, "0")
         stack_direction = "h"
     else
-        blur_size = math.floor(((wh/ww)*width*par-height)/2)
+        blur_size = math.min(math.floor(((wh/ww)*width*par-height)/2), height/2)
         crop_1 = string.format(crop_format, width, blur_size, "0", "0")
         crop_2 = string.format(crop_format, width, blur_size, "0", height - blur_size)
         stack_direction = "v"
