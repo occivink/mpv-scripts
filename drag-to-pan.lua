@@ -3,6 +3,12 @@ local video_dimensions = {}
 local video_pan_origin = {}
 local mouse_pos_origin = {}
 
+local opts = {
+    margin = 50,
+}
+local options = require 'mp.options'
+options.read_options(opts)
+
 function compute_video_dimensions()
     -- this function is very much ripped from video/out/aspect.c in mpv's source
     local keep_aspect = mp.get_property_bool("keepaspect")
@@ -78,7 +84,7 @@ function compute_video_dimensions()
     end
 end
 
-function adjust_pan()
+function drag_to_pan_idle()
     if needs_adjusting then
         local mX, mY = mp.get_mouse_pos()
         mp.set_property_number("video-pan-x", video_pan_origin.x + (mX - mouse_pos_origin.x) / video_dimensions.w)
@@ -87,21 +93,48 @@ function adjust_pan()
     end
 end
 
-function click_handler(table)
+function drag_to_pan_handler(table)
     if table["event"] == "down" then
         v = mp.get_property("video")
         if not v or v == "" or v == "no" then return end
         compute_video_dimensions()
-        mp.register_idle(adjust_pan)
+        mp.register_idle(drag_to_pan_idle)
         mouse_pos_origin.x, mouse_pos_origin.y = mp.get_mouse_pos()
         video_pan_origin.x = mp.get_property("video-pan-x")
         video_pan_origin.y = mp.get_property("video-pan-y")
-        mp.add_forced_key_binding("mouse_move", "drag-to-pan", function() needs_adjusting = true end)
+        mp.add_forced_key_binding("mouse_move", "drag-to-pan-idle", function() needs_adjusting = true end)
     elseif table["event"] == "up" then
-        mp.remove_key_binding("drag-to-pan")
-        mp.unregister_idle(adjust_pan)
+        mp.remove_key_binding("drag-to-pan-idle")
+        mp.unregister_idle(drag_to_pan_idle)
         needs_adjusting = false
     end
 end
 
-mp.add_key_binding(nil, "start-pan", click_handler, {complex = true})
+function pan_follows_cursor_idle()
+    if needs_adjusting then
+        local mX, mY = mp.get_mouse_pos()
+        local window_w, window_h = mp.get_osd_size()
+        local x = math.min(1, math.max(- 2 * mX / window_w + 1, -1))
+        local y = math.min(1, math.max(- 2 * mY / window_h + 1, -1))
+        mp.set_property_number("video-pan-x", x * (video_dimensions.w - window_w + 2 * opts.margin) / (2 * (video_dimensions.w)))
+        mp.set_property_number("video-pan-y", y * (video_dimensions.h - window_h + 2 * opts.margin) / (2 * (video_dimensions.h)))
+        needs_adjusting = false
+    end
+end
+
+function pan_follows_cursor_handler(table)
+    if table["event"] == "down" then
+        v = mp.get_property("video")
+        if not v or v == "" or v == "no" then return end
+        compute_video_dimensions()
+        mp.register_idle(pan_follows_cursor_idle)
+        mp.add_forced_key_binding("mouse_move", "pan-follows-cursor-idle", function() needs_adjusting = true end)
+    elseif table["event"] == "up" then
+        mp.remove_key_binding("pan-follows-cursor-idle")
+        mp.unregister_idle(pan_follows_cursor_idle)
+        needs_adjusting = false
+    end
+end
+
+mp.add_key_binding("MOUSE_BTN0", "drag-to-pan", drag_to_pan_handler, {complex = true})
+mp.add_key_binding(nil, "pan-follows-cursor", pan_follows_cursor_handler, {complex = true})
