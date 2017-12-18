@@ -122,10 +122,11 @@ Holds an internal history for timestamps that have been previously navigated, ac
 
 Pan the current video or image with the cursor.
 
-The script is intended to be used with a mouse binding, such as `MOUSE_BTN0` but you can use whatever.
-Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
+This script offers two commands `drag-to-pan` and `pan-follows-cursor`. The former is similar to how panning a map works, while the second shows a portion of the image according to the position of the cursor in the mpv window.
 
-Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something. There's not much we can do about this script-side.
+You can use this script with mouse bindings such as `MOUSE_BTN0` but any other key works too. Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
+
+Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something. I don't think there is much we can do about this script-side.
 
 # misc.lua
 
@@ -150,7 +151,8 @@ t script-message-to seek_to toggle-seeker
 
 # drag-to-pan.lua
 # this binding is special because we need to monitor up and down events for this key
-MOUSE_BTN0 script-binding drag_to_pan/start-pan
+MOUSE_BTN0 script-binding drag_to_pan/drag-to-pan
+MOUSE_BTN1 script-binding drag_to_pan/pan-follows-cursor
 
 ```
 
