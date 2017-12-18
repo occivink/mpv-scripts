@@ -88,8 +88,11 @@ end
 function drag_to_pan_idle()
     if needs_adjusting then
         local mX, mY = mp.get_mouse_pos()
-        mp.set_property_number("video-pan-x", video_pan_origin.x + (mX - mouse_pos_origin.x) / video_dimensions.w)
-        mp.set_property_number("video-pan-y", video_pan_origin.y + (mY - mouse_pos_origin.y) / video_dimensions.h)
+        local pX = video_pan_origin.x + (mX - mouse_pos_origin.x) / video_dimensions.w
+        local pY = video_pan_origin.y + (mY - mouse_pos_origin.y) / video_dimensions.h
+        mp.set_property_number("video-pan-x", pX)
+        mp.set_property_number("video-pan-y", pY)
+        --mp.command('set video-pan-x ' .. pX .. '; set video-pan-y ' .. pY)
         needs_adjusting = false
     end
 end
@@ -124,8 +127,8 @@ function pan_follows_cursor_idle()
         end
         if (opts.do_not_move_if_all_visible and window_h < video_dimensions.h) then
             mp.set_property_number("video-pan-y", y * (video_dimensions.h - window_h + 2 * opts.margin) / (2 * (video_dimensions.h)))
-        elseif mp.get_property_number("video-pan-x") then
-            mp.get_property_number("video-pan-x", 0)
+        elseif mp.get_property_number("video-pan-y") then
+            mp.get_property_number("video-pan-y", 0)
         end
         needs_adjusting = false
     end
