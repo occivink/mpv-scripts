@@ -22,10 +22,10 @@ function compute_video_dimensions()
         w, h = h,w
         dw, dh = dh, dw
     end
+    local window_w, window_h = mp.get_osd_size()
     if keep_aspect then
         local unscaled = mp.get_property_native("video-unscaled")
         local panscan = mp.get_property_number("panscan")
-        local window_w, window_h = mp.get_osd_size()
 
         local fwidth = window_w
         local fheight = math.floor(window_w / dw * dh)
@@ -55,30 +55,9 @@ function compute_video_dimensions()
         local scaled_width = fwidth + math.floor(vo_panscan_area * panscan * f_w)
         local scaled_height = fheight + math.floor(vo_panscan_area * panscan * f_h)
 
-        local split_scaling = function (dst_size, scaled_src_size, zoom, align, pan)
-            scaled_src_size = math.floor(scaled_src_size * 2 ^ zoom)
-            align = (align + 1) / 2
-            local dst_start = math.floor((dst_size - scaled_src_size) * align + pan * scaled_src_size)
-            if dst_start < 0 then
-                --account for C int cast truncating as opposed to flooring
-                dst_start = dst_start + 1
-            end
-            local dst_end = dst_start + scaled_src_size;
-            if dst_start >= dst_end then
-                dst_start = 0
-                dst_end = 1
-            end
-            return dst_end - dst_start
-        end
         local zoom = mp.get_property_number("video-zoom")
-
-        local align_x = mp.get_property_number("video-align-x")
-        local pan_x = mp.get_property_number("video-pan-x")
-        video_dimensions.w = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
-
-        local align_y = mp.get_property_number("video-align-y")
-        local pan_y = mp.get_property_number("video-pan-y")
-        video_dimensions.h = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
+        video_dimensions.w = scaled_width  * 2 ^ zoom
+        video_dimensions.h = scaled_height * 2 ^ zoom
     else
         video_dimensions.w = window_w
         video_dimensions.h = window_h
@@ -92,7 +71,6 @@ function drag_to_pan_idle()
         local pY = video_pan_origin.y + (mY - mouse_pos_origin.y) / video_dimensions.h
         mp.set_property_number("video-pan-x", pX)
         mp.set_property_number("video-pan-y", pY)
-        --mp.command('set video-pan-x ' .. pX .. '; set video-pan-y ' .. pY)
         needs_adjusting = false
     end
 end
@@ -122,12 +100,12 @@ function pan_follows_cursor_idle()
         local y = math.min(1, math.max(- 2 * mY / window_h + 1, -1))
         if (opts.do_not_move_if_all_visible and window_w < video_dimensions.w) then
             mp.set_property_number("video-pan-x", x * (video_dimensions.w - window_w + 2 * opts.margin) / (2 * (video_dimensions.w)))
-        elseif mp.get_property_number("video-pan-x") then
+        elseif mp.get_property_number("video-pan-x") ~= 0 then
             mp.get_property_number("video-pan-x", 0)
         end
         if (opts.do_not_move_if_all_visible and window_h < video_dimensions.h) then
             mp.set_property_number("video-pan-y", y * (video_dimensions.h - window_h + 2 * opts.margin) / (2 * (video_dimensions.h)))
-        elseif mp.get_property_number("video-pan-y") then
+        elseif mp.get_property_number("video-pan-y") ~= 0 then
             mp.get_property_number("video-pan-y", 0)
         end
         needs_adjusting = false
