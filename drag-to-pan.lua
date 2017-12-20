@@ -4,16 +4,10 @@ local video_dimensions = {
     bottom_right = { x = 0, y = 0 },
     size = { w = 0, h = 0 },
 }
-local video_pan_origin = {
-    x = 0,
-    y = 0,
-}
-local mouse_pos_origin = {
-    x = 0,
-    y = 0,
-}
+local video_pan_origin = { x = 0, y = 0 }
+local mouse_pos_origin = { x = 0, y = 0 }
 local zoom_origin = 0
-local increment = 0
+local zoom_increment = 0
 
 local opts = {
     margin = 50,
@@ -167,8 +161,8 @@ end
 function cursor_centric_zoom_idle()
     if needs_adjusting then
         -- the size in pixels of the (in|de)crement
-        local diffHeight = (2 ^ increment - 1) * video_dimensions.size.h
-        local diffWidth  = (2 ^ increment - 1) * video_dimensions.size.w
+        local diffHeight = (2 ^ zoom_increment - 1) * video_dimensions.size.h
+        local diffWidth  = (2 ^ zoom_increment - 1) * video_dimensions.size.w
 
         -- how far (in percentage of the video size) from the middle the cursor is
         local rx = (video_dimensions.top_left.x + video_dimensions.size.w / 2 - mouse_pos_origin.x) / (video_dimensions.size.w / 2)
@@ -176,7 +170,7 @@ function cursor_centric_zoom_idle()
 
         local newPanX = (video_pan_origin.x * video_dimensions.size.w + rx * diffWidth / 2) / (video_dimensions.size.w + diffWidth)
         local newPanY = (video_pan_origin.y * video_dimensions.size.h + ry * diffHeight / 2) / (video_dimensions.size.h + diffHeight)
-        mp.command("no-osd set video-zoom " .. zoom_origin + increment .. "; no-osd set video-pan-x " .. newPanX .. "; no-osd set video-pan-y " .. newPanY)
+        mp.command("no-osd set video-zoom " .. zoom_origin + zoom_increment .. "; no-osd set video-pan-x " .. newPanX .. "; no-osd set video-pan-y " .. newPanY)
         needs_adjusting = false
     end
 end
@@ -185,7 +179,7 @@ function cursor_centric_zoom_handler(arg)
     local arg_num = tonumber(arg)
     if not arg_num or arg_num == 0 then return end
     if not mp.get_property("video-out-params", nil) then return end
-    if increment == 0 then
+    if zoom_increment == 0 then
         compute_video_dimensions()
         mouse_pos_origin.x, mouse_pos_origin.y = mp.get_mouse_pos()
         video_pan_origin.x = mp.get_property("video-pan-x")
@@ -194,7 +188,7 @@ function cursor_centric_zoom_handler(arg)
         mp.register_idle(cursor_centric_zoom_idle)
         mp.add_forced_key_binding("mouse_move", "cursor-centric-zoom-stop", cursor_centric_zoom_stop)
     end
-    increment = increment + arg_num
+    zoom_increment = zoom_increment + arg_num
     needs_adjusting = true
 end
 
@@ -202,7 +196,7 @@ function cursor_centric_zoom_stop()
     mp.unregister_idle(cursor_centric_zoom_idle)
     mp.remove_key_binding("cursor-centric-zoom-stop")
     needs_adjusting = false
-    increment = 0
+    zoom_increment = 0
 end
 
 mp.add_key_binding(nil, "drag-to-pan", drag_to_pan_handler, {complex = true})
