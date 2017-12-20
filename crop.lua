@@ -4,14 +4,9 @@ local dimensions_changed = false
 local crop_first_corner = nil -- in video space
 
 function get_video_dimensions()
-    if not dimensions_changed then
-        return _video_dimensions
-    end
+    if not dimensions_changed then return _video_dimensions end
     -- this function is very much ripped from video/out/aspect.c in mpv's source
     local video_params = mp.get_property_native("video-out-params")
-    if not video_params then
-        return nil
-    end
     dimensions_changed = false
     local keep_aspect = mp.get_property_bool("keepaspect")
     local w = video_params["w"]
@@ -280,7 +275,7 @@ function reset_crop()
 end
 
 function start_crop()
-    if not mp.get_property("path") or mp.get_property("video") == "no" then return end
+    if not mp.get_property("video-out-params", nil) then return end
     needs_drawing = true
     dimensions_changed = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)
