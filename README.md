@@ -126,8 +126,6 @@ This script offers two commands `drag-to-pan` and `pan-follows-cursor`. The form
 
 You can use this script with mouse bindings such as `MOUSE_BTN0` but any other key works too. Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
 
-Quick diagonal movement looks shitty because setting the `video-pan-*` property triggers a full pipeline or something. I don't think there is much we can do about this script-side.
-
 # misc.lua
 
 Some commands that are too simple to warrant their own script. Have a look at the source in case you're curious.  
