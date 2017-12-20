@@ -55,13 +55,38 @@ function compute_video_dimensions()
         local scaled_width = fwidth + math.floor(vo_panscan_area * panscan * f_w)
         local scaled_height = fheight + math.floor(vo_panscan_area * panscan * f_h)
 
+        local split_scaling = function (dst_size, scaled_src_size, zoom, align, pan)
+            scaled_src_size = math.floor(scaled_src_size * 2 ^ zoom)
+            align = (align + 1) / 2
+            local dst_start = math.floor((dst_size - scaled_src_size) * align + pan * scaled_src_size)
+            if dst_start < 0 then
+                --account for C int cast truncating as opposed to flooring
+                dst_start = dst_start + 1
+            end
+            local dst_end = dst_start + scaled_src_size;
+            if dst_start >= dst_end then
+                dst_start = 0
+                dst_end = 1
+            end
+            return dst_start, dst_end
+        end
         local zoom = mp.get_property_number("video-zoom")
-        video_dimensions.w = scaled_width  * 2 ^ zoom
-        video_dimensions.h = scaled_height * 2 ^ zoom
+
+        local align_x = mp.get_property_number("video-align-x")
+        local pan_x = mp.get_property_number("video-pan-x")
+        video_dimensions.top_left.x, video_dimensions.bottom_right.x = split_scaling(window_w, scaled_width, zoom, align_x, pan_x)
+
+        local align_y = mp.get_property_number("video-align-y")
+        local pan_y = mp.get_property_number("video-pan-y")
+        video_dimensions.top_left.y, video_dimensions.bottom_right.y = split_scaling(window_h,  scaled_height, zoom, align_y, pan_y)
     else
-        video_dimensions.w = window_w
-        video_dimensions.h = window_h
+        video_dimensions.top_left.x = 0
+        video_dimensions.bottom_right.x = window_w
+        video_dimensions.top_left.y = 0
+        video_dimensions.bottom_right.y = window_h
     end
+    video_dimensions.size.w = video_dimensions.bottom_right.x - video_dimensions.top_left.x
+    video_dimensions.size.h = video_dimensions.bottom_right.y - video_dimensions.top_left.y
 end
 
 function drag_to_pan_idle()
