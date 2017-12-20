@@ -92,18 +92,16 @@ end
 function drag_to_pan_idle()
     if needs_adjusting then
         local mX, mY = mp.get_mouse_pos()
-        local pX = video_pan_origin.x + (mX - mouse_pos_origin.x) / video_dimensions.w
-        local pY = video_pan_origin.y + (mY - mouse_pos_origin.y) / video_dimensions.h
-        mp.set_property_number("video-pan-x", pX)
-        mp.set_property_number("video-pan-y", pY)
+        local pX = video_pan_origin.x + (mX - mouse_pos_origin.x) / video_dimensions.size.w
+        local pY = video_pan_origin.y + (mY - mouse_pos_origin.y) / video_dimensions.size.h
+        mp.command("no-osd set video-pan-x " .. pX .. "; no-osd set video-pan-y " .. pY)
         needs_adjusting = false
     end
 end
 
 function drag_to_pan_handler(table)
     if table["event"] == "down" then
-        v = mp.get_property("video")
-        if not v or v == "" or v == "no" then return end
+        if not mp.get_property("video-out-params", nil) then return end
         compute_video_dimensions()
         mp.register_idle(drag_to_pan_idle)
         mouse_pos_origin.x, mouse_pos_origin.y = mp.get_mouse_pos()
@@ -123,15 +121,19 @@ function pan_follows_cursor_idle()
         local window_w, window_h = mp.get_osd_size()
         local x = math.min(1, math.max(- 2 * mX / window_w + 1, -1))
         local y = math.min(1, math.max(- 2 * mY / window_h + 1, -1))
-        if (opts.do_not_move_if_all_visible and window_w < video_dimensions.w) then
-            mp.set_property_number("video-pan-x", x * (video_dimensions.w - window_w + 2 * opts.margin) / (2 * (video_dimensions.w)))
+        local command = ""
+        if (opts.do_not_move_if_all_visible and window_w < video_dimensions.size.w) then
+            command = command .. "no-osd set video-pan-x " .. x * (video_dimensions.size.w - window_w + 2 * opts.margin) / (2 * video_dimensions.size.w) .. ";"
         elseif mp.get_property_number("video-pan-x") ~= 0 then
-            mp.get_property_number("video-pan-x", 0)
+            command = command .. "no-osd set video-pan-x " .. "0;"
         end
-        if (opts.do_not_move_if_all_visible and window_h < video_dimensions.h) then
-            mp.set_property_number("video-pan-y", y * (video_dimensions.h - window_h + 2 * opts.margin) / (2 * (video_dimensions.h)))
+        if (opts.do_not_move_if_all_visible and window_h < video_dimensions.size.h) then
+            command = command .. "no-osd set video-pan-y " .. y * (video_dimensions.size.h - window_h + 2 * opts.margin) / (2 * video_dimensions.size.h) .. ";"
         elseif mp.get_property_number("video-pan-y") ~= 0 then
-            mp.get_property_number("video-pan-y", 0)
+            command = command .. "no-osd set video-pan-y " .. "0;"
+        end
+        if command ~= "" then
+            mp.command(command)
         end
         needs_adjusting = false
     end
@@ -139,8 +141,7 @@ end
 
 function pan_follows_cursor_handler(table)
     if table["event"] == "down" then
-        v = mp.get_property("video")
-        if not v or v == "" or v == "no" then return end
+        if not mp.get_property("video-out-params", nil) then return end
         compute_video_dimensions()
         mp.register_idle(pan_follows_cursor_idle)
         mp.add_forced_key_binding("mouse_move", "pan-follows-cursor-idle", function() needs_adjusting = true end)
