@@ -118,14 +118,6 @@ Seek to an absolute position in the current video by typing its timestamp.
 Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
 Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
 
-# drag-to-pan.lua
-
-Pan the current video or image with the cursor.
-
-This script offers two commands `drag-to-pan` and `pan-follows-cursor`. The former is similar to how panning a map works, while the second shows a portion of the image according to the position of the cursor in the mpv window.
-
-You can use this script with mouse bindings such as `MOUSE_BTN0` but any other key works too. Note that `MOUSE_BTN0` clashes with the window dragging feature, you can set `window-dragging=no` to prevent that.
-
 # misc.lua
 
 Some commands that are too simple to warrant their own script. Have a look at the source in case you're curious.  
@@ -146,11 +138,5 @@ b script-message-to blur_edges toggle-blur
 
 # seek-to.lua
 t script-message-to seek_to toggle-seeker
-
-# drag-to-pan.lua
-# this binding is special because we need to monitor up and down events for this key
-MOUSE_BTN0 script-binding drag_to_pan/drag-to-pan
-MOUSE_BTN1 script-binding drag_to_pan/pan-follows-cursor
-
 ```
 
