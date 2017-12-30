@@ -116,9 +116,9 @@ function start_encoding(input_path, from, to, settings)
     local args = {
         "ffmpeg",
         "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
-        "-i", input_path,
         "-ss", seconds_to_time_string(from, false),
-        "-to", seconds_to_time_string(to, false)
+        "-i", input_path,
+        "-to", tostring(to-from)
     }
 
     -- map currently playing channels
