@@ -153,7 +153,7 @@ function start_encoding(input_path, from, to, settings)
     if output_directory == "" then
         output_directory, _ = utils.split_path(input_path)
     else
-        output_directory = string.gsub(output_directory, "^~", os.getenv("HOME"))
+        output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
     local output_name = string.format("%s.%s", settings.output_format, settings.container)
     local input_name = mp.get_property("filename/no-ext") or "encode"
