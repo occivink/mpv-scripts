@@ -63,7 +63,7 @@ function get_video_filters()
         local filter
         if name == "crop" then
             local p = vf["params"]
-            filter = string.format("crop=%d:%d:%d:%d", p["w"], p["h"], p["x"], p["y"])
+            filter = string.format("crop=%d:%d:%d:%d", p.w, p.h, p.x, p.y)
         elseif name == "mirror" then
             filter = "hflip"
         elseif name == "flip" then
@@ -85,14 +85,13 @@ function get_video_filters()
 end
 
 function get_active_tracks()
-    local tracks = mp.get_property_native("track-list")
     local accepted = {
         video = true,
         audio = not mp.get_property_bool("mute"),
         sub = mp.get_property_bool("sub-visibility")
     }
     local active_tracks = {}
-    for _, track in ipairs(tracks) do
+    for _, track in ipairs(mp.get_property_native("track-list")) do
         if track["selected"] and accepted[track["type"]] then
             active_tracks[#active_tracks + 1] = string.format("0:%d", track["ff-index"])
         end
