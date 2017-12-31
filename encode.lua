@@ -199,6 +199,7 @@ function clear_timestamp()
     timer:kill()
     start_timestamp = nil
     mp.remove_key_binding("encode-ESC")
+    mp.remove_key_binding("encode-ENTER")
     mp.osd_message("", 0)
 end
 
@@ -224,6 +225,7 @@ function set_timestamp(profile)
         msg()
         timer = mp.add_periodic_timer(timer_duration, msg)
         mp.add_forced_key_binding("ESC", "encode-ESC", clear_timestamp)
+        mp.add_forced_key_binding("ENTER", "encode-ENTER", function() set_timestamp(profile) end)
     else
         local from = start_timestamp
         local to = mp.get_property_number("time-pos")
