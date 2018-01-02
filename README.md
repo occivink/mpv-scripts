@@ -17,7 +17,9 @@ You can use a binding such as `d vf del -1` to undo the last crop.
 
 # encode.lua
 
-Make an extract of the currently playing video using `ffmpeg`. Press the binding once to set the beginning of the extract. Press a second time to set the end and start encoding.  
+**You need ffmpeg in your PATH (or in the same folder as mpv) for this script to work.**
+
+Make an extract of the currently playing video using `ffmpeg`. Press the configured binding to set the beginning of the extract. Then, press ENTER to set the end and start encoding.  
 This script defines a command that you can bind in your `input.conf` like so:
 ```
 e script-message-to encode set-timestamp
