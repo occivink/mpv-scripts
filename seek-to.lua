@@ -80,7 +80,7 @@ end
 
 function seek_to()
     copy_history_to_last()
-    mp.set_property_number("time-pos", current_time_as_sec(history[history_position]))
+    mp.commandv("osd-bar", "seek", current_time_as_sec(history[history_position]), "absolute")
     --deduplicate consecutive timestamps
     if #history == 1 or not time_equal(history[history_position], history[#history - 1]) then
         history[#history + 1] = {}
