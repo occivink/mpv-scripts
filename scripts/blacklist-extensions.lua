@@ -1,7 +1,7 @@
 opts = {
     blacklist="",
     whitelist="",
-    remove_file_without_extension = false,
+    remove_files_without_extension = false,
     oneshot = true,
 }
 (require 'mp.options').read_options(opts)
