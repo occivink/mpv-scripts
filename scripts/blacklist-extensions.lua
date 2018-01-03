@@ -50,8 +50,8 @@ function process(playlist_count)
     for i = #playlist, 1, -1 do
         local filename = playlist[i].filename
         local extension = string.match(filename, "%.([^.]+)$")
-        if (opts.remove_file_without_extension and not extension)
-            or filter(string.lower(extension))
+        if (not extension and opts.remove_file_without_extension) or
+            (extension and filter(string.lower(extension)))
         then
             mp.commandv("playlist-remove", i-1)
         end
