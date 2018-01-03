@@ -91,6 +91,18 @@ e script-message-to encode set-timestamp encode_webm
 E script-message-to encode set-timestamp encode_slice
 ```
 
+# seek-to.lua
+
+Seek to an absolute position in the current video by typing its timestamp.
+
+Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
+Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
+
+# blacklist-extensions.lua
+
+Automatically remove playlist entries whose extension match a black/whitelist. Useful when opening directories with mpv.  
+Both lists can be defined in `lua-settings/blacklist_extensions.conf` as comma-separated lists of extensions. The whitelist has precedence over the blacklist.
+
 # blur-edges.lua
 
 Fills the black bars on the side of a video with a blurred copy of the edges of the video.
@@ -113,13 +125,6 @@ reapply_delay=0.5
 
 Still WIP so expect things to change.
 
-# seek-to.lua
-
-Seek to an absolute position in the current video by typing its timestamp.
-
-Toggle with whatever binding you chose. Move the current cursor position with <kbd>←</kbd> and <kbd>→</kbd>,  Change the number currently selected with the number keys (duh). Press <kbd>Enter</kbd> to seek to the entered position.
-Holds an internal history for timestamps that have been previously navigated, accessible with <kbd>↑</kbd> and <kbd>↓</kbd>.
-
 # misc.lua
 
 Some commands that are too simple to warrant their own script. Have a look at the source in case you're curious.  
@@ -141,4 +146,3 @@ b script-message-to blur_edges toggle-blur
 # seek-to.lua
 t script-message-to seek_to toggle-seeker
 ```
-
