@@ -25,8 +25,8 @@ if #opts.whitelist > 0 then
             if extension == ext then
                 return false
             end
-        return true
         end
+        return true
     end
 elseif #opts.blacklist > 0 then
     filter = function(extension)
@@ -34,8 +34,8 @@ elseif #opts.blacklist > 0 then
             if extension == ext then
                 return true
             end
-        return false
         end
+        return false
     end
 else
     return
@@ -50,8 +50,8 @@ function process(playlist_count)
     for i = #playlist, 1, -1 do
         local filename = playlist[i].filename
         local extension = string.match(filename, "%.([^.]+)$")
-        if (not extension and opts.remove_file_without_extension)
-            or filter(extension)
+        if (opts.remove_file_without_extension and not extension)
+            or filter(string.lower(extension))
         then
             mp.commandv("playlist-remove", i-1)
         end

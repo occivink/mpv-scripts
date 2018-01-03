@@ -101,7 +101,8 @@ Holds an internal history for timestamps that have been previously navigated, ac
 # blacklist-extensions.lua
 
 Automatically remove playlist entries whose extension match a black/whitelist. Useful when opening directories with mpv.  
-Both lists can be defined in `lua-settings/blacklist_extensions.conf` as comma-separated lists of extensions. The whitelist has precedence over the blacklist.
+Both lists can be defined in `lua-settings/blacklist_extensions.conf` as comma-separated lists of extensions.  
+The lists are mutually exclusive, if both are defined the whitelist has precedence.
 
 # blur-edges.lua
 
