@@ -2,6 +2,9 @@ local utils = require "mp.utils"
 local options = require "mp.options"
 
 local start_timestamp = nil
+local profile_start = ""
+
+-- implementation detail of the osd message
 local timer = nil
 local timer_duration = 2
 
@@ -198,6 +201,7 @@ end
 function clear_timestamp()
     timer:kill()
     start_timestamp = nil
+    profile_start = ""
     mp.remove_key_binding("encode-ESC")
     mp.remove_key_binding("encode-ENTER")
     mp.osd_message("", 0)
@@ -214,7 +218,8 @@ function set_timestamp(profile)
         return
     end
 
-    if not start_timestamp then
+    if not start_timestamp or profile ~= profile_start then
+        profile_start = profile
         start_timestamp = mp.get_property_number("time-pos")
         local msg = function()
             mp.osd_message(
