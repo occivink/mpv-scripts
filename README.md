@@ -1,95 +1,32 @@
 # Foreword
 
-These scripts are completely independent. Some of them work together nicely (e.g. `crop.lua` and `encode.lua`) but that's it. Just copy whichever scripts you're interested in to your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for installation instructions).  
+These scripts are completely independent. Some of them work together nicely (e.g. `scripts/crop.lua` and `scripts/encode.lua`) but that's it. Just copy whichever scripts you're interested in to your `scripts/` directory (see [here](https://mpv.io/manual/master/#lua-scripting) for installation instructions).  
 
 [![demo](https://i.vimeocdn.com/filter/overlay?src0=https%3A%2F%2Fi.vimeocdn.com%2Fvideo%2F641523401_1280x720.jpg&src1=https%3A%2F%2Ff.vimeocdn.com%2Fimages_v6%2Fshare%2Fplay_icon_overlay.png)](https://vimeo.com/222879214)
 
 ## Bindings
 
-None of these scripts come with default bindings. Instead, you're encouraged to set your own in `input.conf`. See below for my own bindings as a sample.
+None of these scripts come with default bindings. Instead, you should set your own in `input.conf`, see the example in this repo.
 
 # crop.lua
 
-Crop the current video in a visual manner. UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and is aware of some properties like pan or zoom, there are other subtleties.
+Crop the current video in a visual manner. 
+
+UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop), code is original. The main difference is that this script supports recursively cropping and is aware of some properties like pan or zoom, there are other subtleties.
 
 Press the binding to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
-You can use a binding such as `d vf del -1` to undo the last crop.
 
 # encode.lua
 
 **You need ffmpeg in your PATH (or in the same folder as mpv) for this script to work.**
 
-Make an extract of the currently playing video using `ffmpeg`. Press the configured binding to set the beginning of the extract. Then, press ENTER to set the end and start encoding.  
-This script defines a command that you can bind in your `input.conf` like so:
-```
-e script-message-to encode set-timestamp
-E script-message-to encode set-timestamp PROFILE
-```
+Make an extract of the video currently playing using `ffmpeg`. 
 
-PROFILE refers to a `lua-settings/PROFILE.conf` file. Without any profile, a webm is generated (see defaults below). A profile may define the following variables:
+Press the configured binding to set the beginning of the extract. Then, press ENTER to set the end and start encoding.
 
-```
-# the container of the output, so webm/mkv/mp4...
-container=webm
+By default, the script creates a webm compatible with certain imageboards. You can create different profiles depending on the type of encode you want to create. In particular, you can change the codecs used, which tracks are active and the filters to apply. 
 
-# if yes, only encode the currently active tracks
-# for example, mute the player / hide the subtitles if you don't want audio / subs to be part of the extract
-only_active_tracks=no
-
-# whether to preserve some of the applied filters (crop, rotate, flip and mirror) into the extract
-# this is pretty useful in combination with crop.lua
-# note that you cannot copy video streams and apply filters at the same time
-preserve_filters=yes
-
-# apply another filter after the ones from the previous option if any 
-append_filter=
-
-# additional parameters passed to ffmpeg
-codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
-
-# format of the output filename
-# Does basic interpolation on the following variables: $f, $t, $s, $e, $d, $p, $n which respectively represent
-# input filename, title, start timestamp, end timestamp, duration, profile name and an incrementing number in case of conflicts
-output_format=$f_$n
-
-# the directory in which to create the extract
-# empty means the same directory as the input file
-# relative paths are relative to mpv's working directory, absolute ones work like you would expect
-output_directory=
-
-# if yes, the ffmpeg process will run detached from mpv and we won't know if it succeeded or not
-# if no, we know the result of calling ffmpeg, but we can only encode one extract at a time and mpv will block on exit
-detached=yes
-
-# if yes, print the ffmpeg call before executing it
-print=yes
-```
-
-## Examples
-
-Profile for making webms your favorite imageboard: `~/.config/mpv/lua-settings/encode_webm.conf`:
-```
-container=webm
-only_active_tracks=no
-preserve_filters=yes
-# downscale if the extract has more pixels than 960x540
-append_filter=scale=2*trunc(iw/max(1\,sqrt((iw*ih)/(960*540)))/2):-2
-# if somebody knows a better way to coerce the vp8 encoder into producing non-garbage I'd like to know
-codec=-an -sn -c:v libvpx -crf 10 -b:v 1000k
-output_directory=~/webms/
-```
-Profile for slicing a video without reencoding it `~/.config/mpv/lua-settings/encode_slice.conf`:
-```
-container=mkv
-only_active_tracks=no
-preserve_filters=no
-codec=-c copy
-```
-Relevant `~/.config/mpv/input.conf`:
-```
-e script-message-to encode set-timestamp encode_webm
-E script-message-to encode set-timestamp encode_slice
-```
+See `lua-settings/encode_webm.conf` for the default options and a description of them. `lua-settings/encode_slice.conf` contains another example profile. 
 
 # seek-to.lua
 
@@ -100,50 +37,18 @@ Holds an internal history for timestamps that have been previously navigated, ac
 
 # blacklist-extensions.lua
 
-Automatically remove playlist entries whose extension match a black/whitelist. Useful when opening directories with mpv.  
+Automatically remove playlist entries by extension according to a black/whitelist. Useful when opening directories with mpv.
+
 Both lists can be defined in `lua-settings/blacklist_extensions.conf` as comma-separated lists of extensions.  
-The lists are mutually exclusive, if both are defined the whitelist has precedence.
+The lists are mutually exclusive, if both are defined the whitelist takes precedence.
 
 # blur-edges.lua
 
-Fills the black bars on the side of a video with a blurred copy of the edges of the video.
+Fills the black bars on the side of a video with a blurred copy of its edges.
 
 The script defines a `toggle-blur` command that you can bind.  
-It can be configured via `lua-settings/blur_edges.conf` using the following properties:
-```
-# these two properties control the blurriness. Check the ffmpeg documentation of 'boxblur' for more details
-blur_radius=10
-blur_power=10
-# which black bars should be replaced by blurry video. Can be "all", "horizontal" or "vertical"
-mode=all
-# the minimum size of the black bars for the effect to be applied
-minimum_black_bar_size=3
-# if the effect should be applied automatically if there are black bars
-active=yes
-# the delay (in seconds) after which the effect should be applied. This is necessary as the filter must be reapplied every time the window is resized (which can be in very quick succession)
-reapply_delay=0.5
-```
-
-Still WIP so expect things to change.
+It can be configured via `lua-settings/blur_edges.conf`.
 
 # misc.lua
 
 Some commands that are too simple to warrant their own script. Have a look at the source in case you're curious.  
-
-# Sample input.conf
-
-```
-# crop.lua
-c script-message-to crop start-crop
-d vf del -1
-
-# encode.lua
-e script-message-to encode set-timestamp
-E script-message-to encode set-timestamp encode_slice
-
-# blur-edges.lua
-b script-message-to blur_edges toggle-blur
-
-# seek-to.lua
-t script-message-to seek_to toggle-seeker
-```
