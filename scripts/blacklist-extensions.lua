@@ -49,7 +49,7 @@ function process(playlist_count)
     local playlist = mp.get_property_native("playlist")
     for i = #playlist, 1, -1 do
         local filename = playlist[i].filename
-        local extension = string.match(filename, "%.([^.]+)$")
+        local extension = string.match(filename, "%.([^./]+)$")
         if (not extension and opts.remove_file_without_extension) or
             (extension and filter(string.lower(extension)))
         then
