@@ -280,6 +280,7 @@ function start_crop()
     dimensions_changed = true
     mp.add_forced_key_binding("mouse_move", "crop-mouse-moved", function() needs_drawing = true end)
     mp.add_forced_key_binding("MOUSE_BTN0", "crop-mouse-click", update_crop_zone_state)
+    mp.add_forced_key_binding("ENTER", "crop-enter", update_crop_zone_state)
     mp.add_forced_key_binding("ESC", "crop-esc", cancel_crop)
     local properties = {
         "keepaspect",
@@ -305,6 +306,7 @@ function cancel_crop()
     crop_first_corner = nil
     mp.remove_key_binding("crop-mouse-moved")
     mp.remove_key_binding("crop-mouse-click")
+    mp.remove_key_binding("crop-enter")
     mp.remove_key_binding("crop-esc")
     mp.unobserve_property(reset_crop)
     mp.unregister_idle(draw_crop_zone)
