@@ -72,14 +72,14 @@ function get_video_filters()
         elseif name == "flip" then
             filter = "vflip"
         elseif name == "rotate" then
-            local rotation = tonumber(vf["params"]["angle"])
+            local rotation = vf["params"]["angle"]
             -- rotate is NOT the filter we want here
-            if rotation == 90 then
-                filter = string.format("transpose=clock")
-            elseif rotation == 180 then
-                filter = string.format("transpose=clock,transpose=clock")
-            elseif rotation == 270 then
-                filter = string.format("transpose=cclock")
+            if rotation == "90" then
+                filter = "transpose=clock"
+            elseif rotation == "180" then
+                filter = "transpose=clock,transpose=clock"
+            elseif rotation == "270" then
+                filter = "transpose=cclock"
             end
         end
         filters[#filters + 1] = filter
