@@ -18,9 +18,9 @@ end
 opts.blacklist = split(opts.blacklist)
 opts.whitelist = split(opts.whitelist)
 
-local filter
+local exclude
 if #opts.whitelist > 0 then
-    filter = function(extension)
+    exclude = function(extension)
         for _, ext in pairs(opts.whitelist) do
             if extension == ext then
                 return false
@@ -29,7 +29,7 @@ if #opts.whitelist > 0 then
         return true
     end
 elseif #opts.blacklist > 0 then
-    filter = function(extension)
+    exclude = function(extension)
         for _, ext in pairs(opts.blacklist) do
             if extension == ext then
                 return true
@@ -41,6 +41,20 @@ else
     return
 end
 
+function should_remove(filename)
+    if string.find(filename, "://") then
+        return false
+    end
+    local extension = string.match(filename, "%.([^./]+)$")
+    if not extension and opts.remove_file_without_extension then
+        return true
+    end
+    if extension and exclude(string.lower(extension)) then
+        return true
+    end
+    return false
+end
+
 function process(playlist_count)
     if playlist_count < 2 then return end
     if opts.oneshot then
@@ -49,12 +63,7 @@ function process(playlist_count)
     local playlist = mp.get_property_native("playlist")
     local removed = 0
     for i = #playlist, 1, -1 do
-        local filename = playlist[i].filename
-        local extension = string.match(filename, "%.([^./]+)$")
-        if not string.find(filename, "://") and
-            ((not extension and opts.remove_file_without_extension) or
-            (extension and filter(string.lower(extension))))
-        then
+        if should_remove(playlist[i].filename) then
             mp.commandv("playlist-remove", i-1)
             removed = removed + 1
         end
