@@ -39,8 +39,7 @@ Holds an internal history for timestamps that have been previously navigated, ac
 
 Automatically remove playlist entries by extension according to a black/whitelist. Useful when opening directories with mpv.
 
-Both lists can be defined in `lua-settings/blacklist_extensions.conf` as comma-separated lists of extensions.  
-The lists are mutually exclusive, if both are defined the whitelist takes precedence.
+The script doesn't do anything by default, you need to copy `lua-settings/blacklist_extensions.conf` and modify it to your liking.
 
 # blur-edges.lua
 

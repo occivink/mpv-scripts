@@ -5,7 +5,7 @@ opts = {
     oneshot = true,
 }
 (require 'mp.options').read_options(opts)
-local utils = require 'mp.utils'
+local msg = require 'mp.msg'
 
 function split(input)
     local ret = {}
@@ -47,14 +47,20 @@ function process(playlist_count)
         mp.unobserve_property(observe)
     end
     local playlist = mp.get_property_native("playlist")
+    local removed = 0
     for i = #playlist, 1, -1 do
         local filename = playlist[i].filename
         local extension = string.match(filename, "%.([^./]+)$")
-        if (not extension and opts.remove_file_without_extension) or
-            (extension and filter(string.lower(extension)))
+        if not string.find(filename, "://") and
+            ((not extension and opts.remove_file_without_extension) or
+            (extension and filter(string.lower(extension))))
         then
             mp.commandv("playlist-remove", i-1)
+            removed = removed + 1
         end
+    end
+    if removed == #playlist then
+        msg.warn("Removed eveything from the playlist")
     end
 end
 
