@@ -3,6 +3,14 @@ local needs_drawing = false
 local dimensions_changed = false
 local crop_first_corner = nil -- in video space
 
+local opts = {
+    draw_shade = true,
+    shade_opacity = "77",
+    draw_crosshair = true,
+    draw_text = true,
+}
+(require 'mp.options').read_options(opts)
+
 function get_video_dimensions()
     if not dimensions_changed then return _video_dimensions end
     -- this function is very much ripped from video/out/aspect.c in mpv's source
@@ -131,10 +139,10 @@ end
 function draw_shade(ass, unshaded, video)
     ass:new_event()
     ass:pos(0, 0)
-    ass:append('{\\bord0}')
-    ass:append('{\\shad0}')
-    ass:append('{\\c&H000000&}')
-    ass:append('{\\alpha&H77}')
+    ass:append("{\\bord0}")
+    ass:append("{\\shad0}")
+    ass:append("{\\c&H000000&}")
+    ass:append("{\\alpha&H" .. opts.shade_opacity .. "77}")
     local c1, c2 = unshaded.top_left, unshaded.bottom_right
     local v = video
     --          c1.x   c2.x
@@ -157,10 +165,10 @@ end
 
 function draw_crosshair(ass, center, window_size)
     ass:new_event()
-    ass:append('{\\bord0}')
-    ass:append('{\\shad0}')
-    ass:append('{\\c&HBBBBBB&}')
-    ass:append('{\\alpha&H00&}')
+    ass:append("{\\bord0}")
+    ass:append("{\\shad0}")
+    ass:append("{\\c&HBBBBBB&}")
+    ass:append("{\\alpha&H00&}")
     ass:pos(0, 0)
     ass:draw_start()
     ass:rect_cw(center.x - 0.5, 0, center.x + 0.5, window_size.h)
@@ -181,9 +189,9 @@ function draw_position_text(ass, text, position, window_size, offset)
         align = align + 6
         ofy = 1
     end
-    ass:append('{\\an'..align..'}')
-    ass:append('{\\fs26}')
-    ass:append('{\\bord1.5}')
+    ass:append("{\\an"..align.."}")
+    ass:append("{\\fs26}")
+    ass:append("{\\bord1.5}")
     ass:pos(ofx*offset + position.x, ofy*offset + position.y)
     ass:append(text)
 end
@@ -203,7 +211,7 @@ function draw_crop_zone()
         cursor_pos = clamp_point(video_dim.top_left, cursor_pos, video_dim.bottom_right)
         local ass = assdraw.ass_new()
 
-        if crop_first_corner then
+        if opts.draw_shade and crop_first_corner then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
             local unshaded = {}
             unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, cursor_pos)
@@ -219,17 +227,21 @@ function draw_crop_zone()
             draw_shade(ass, unshaded, video_visible)
         end
 
-        draw_crosshair(ass, cursor_pos, window_size)
-
-        cursor_video = screen_to_video(cursor_pos, video_dim)
-        local text = string.format("%d, %d", cursor_video.x, cursor_video.y)
-        if crop_first_corner then
-            text = string.format("%s (%dx%d)", text,
-                math.abs(cursor_video.x - crop_first_corner.x),
-                math.abs(cursor_video.y - crop_first_corner.y)
-            )
+        if opts.draw_crosshair then
+            draw_crosshair(ass, cursor_pos, window_size)
         end
-        draw_position_text(ass, text, cursor_pos, window_size, 6)
+
+        if opts.draw_text then
+            cursor_video = screen_to_video(cursor_pos, video_dim)
+            local text = string.format("%d, %d", cursor_video.x, cursor_video.y)
+            if crop_first_corner then
+                text = string.format("%s (%dx%d)", text,
+                    math.abs(cursor_video.x - crop_first_corner.x),
+                    math.abs(cursor_video.y - crop_first_corner.y)
+                )
+            end
+            draw_position_text(ass, text, cursor_pos, window_size, 6)
+        end
 
         mp.set_osd_ass(window_size.w, window_size.h, ass.text)
         needs_drawing = false
