@@ -146,7 +146,7 @@ function draw_shade(ass, unshaded, video)
     ass:append("{\\bord0}")
     ass:append("{\\shad0}")
     ass:append("{\\c&H000000&}")
-    ass:append("{\\alpha&H" .. opts.shade_opacity .. "77}")
+    ass:append("{\\alpha&H" .. opts.shade_opacity .. "}")
     local c1, c2 = unshaded.top_left, unshaded.bottom_right
     local v = video
     --          c1.x   c2.x
@@ -210,7 +210,6 @@ function draw_crop_zone()
 
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
-        -- make a deep copy
         crop_cursor = clamp_point(video_dim.top_left, crop_cursor, video_dim.bottom_right)
         local ass = assdraw.ass_new()
 
@@ -289,17 +288,26 @@ function reset_crop()
 end
 
 local bindings = {}
+local bindings_repeat = {}
+
+function cancel_crop()
+    needs_drawing = false
+    crop_first_corner = nil
+    for key, _ in pairs(bindings) do
+        mp.remove_key_binding("crop-"..key)
+    end
+    for key, _ in pairs(bindings_repeat) do
+        mp.remove_key_binding("crop-"..key)
+    end
+    mp.unobserve_property(reset_crop)
+    mp.unregister_idle(draw_crop_zone)
+    mp.set_osd_ass(1280, 720, '')
+end
+
 bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); needs_drawing = true end
 bindings["ENTER"]      = update_crop_zone_state
 bindings["MOUSE_BTN0"] = update_crop_zone_state
 bindings["ESC"]        = cancel_crop
-
-function inc(x, y)
-    crop_cursor.x = crop_cursor.x + x
-    crop_cursor.y = crop_cursor.y + y
-end
-
-local bindings_repeat = {}
 bindings_repeat["LEFT"]       = function() crop_cursor.x = crop_cursor.x - 30; needs_drawing = true end
 bindings_repeat["RIGHT"]      = function() crop_cursor.x = crop_cursor.x + 30; needs_drawing = true end
 bindings_repeat["UP"]         = function() crop_cursor.y = crop_cursor.y - 30; needs_drawing = true end
@@ -338,20 +346,6 @@ function start_crop()
     for _, p in ipairs(properties) do
         mp.observe_property(p, "native", reset_crop)
     end
-end
-
-function cancel_crop()
-    needs_drawing = false
-    crop_first_corner = nil
-    for key, _ in pairs(bindings) do
-        mp.remove_key_binding("crop-"..key)
-    end
-    for key, _ in pairs(bindings_repeat) do
-        mp.remove_key_binding("crop-"..key)
-    end
-    mp.unobserve_property(reset_crop)
-    mp.unregister_idle(draw_crop_zone)
-    mp.set_osd_ass(1280, 720, '')
 end
 
 function toggle_crop()
