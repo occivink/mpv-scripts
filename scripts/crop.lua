@@ -3,8 +3,31 @@ local opts = {
     shade_opacity = "77",
     draw_crosshair = true,
     draw_text = true,
+    mouse_support=true,
+    coarse_movement=30,
+    left_coarse="LEFT",
+    right_coarse="RIGHT",
+    up_coarse="UP",
+    down_coarse="DOWN",
+    fine_movement=1,
+    left_fine="ALT+LEFT",
+    right_fine="ALT+RIGHT",
+    up_fine="ALT+UP",
+    down_fine="ALT+DOWN",
+    accept="ENTER,MOUSE_BTN0",
+    cancel="ESC",
 }
 (require 'mp.options').read_options(opts)
+
+function split(input)
+    local ret = {}
+    for str in string.gmatch(input, "([^,]+)") do
+        ret[#ret + 1] = str
+    end
+    return ret
+end
+opts.accept = split(opts.accept)
+opts.cancel = split(opts.cancel)
 
 local assdraw = require 'mp.assdraw'
 local needs_drawing = false
@@ -19,6 +42,7 @@ function get_video_dimensions()
     if not dimensions_changed then return _video_dimensions end
     -- this function is very much ripped from video/out/aspect.c in mpv's source
     local video_params = mp.get_property_native("video-out-params")
+    if not video_params then return nil end
     dimensions_changed = false
     local keep_aspect = mp.get_property_bool("keepaspect")
     local w = video_params["w"]
@@ -304,18 +328,31 @@ function cancel_crop()
     mp.set_osd_ass(1280, 720, '')
 end
 
-bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); needs_drawing = true end
-bindings["ENTER"]      = update_crop_zone_state
-bindings["MOUSE_BTN0"] = update_crop_zone_state
-bindings["ESC"]        = cancel_crop
-bindings_repeat["LEFT"]       = function() crop_cursor.x = crop_cursor.x - 30; needs_drawing = true end
-bindings_repeat["RIGHT"]      = function() crop_cursor.x = crop_cursor.x + 30; needs_drawing = true end
-bindings_repeat["UP"]         = function() crop_cursor.y = crop_cursor.y - 30; needs_drawing = true end
-bindings_repeat["DOWN"]       = function() crop_cursor.y = crop_cursor.y + 30; needs_drawing = true end
-bindings_repeat["ALT+LEFT"]   = function() crop_cursor.x = crop_cursor.x - 1; needs_drawing = true end
-bindings_repeat["ALT+RIGHT"]  = function() crop_cursor.x = crop_cursor.x + 1; needs_drawing = true end
-bindings_repeat["ALT+UP"]     = function() crop_cursor.y = crop_cursor.y - 1; needs_drawing = true end
-bindings_repeat["ALT+DOWN"]   = function() crop_cursor.y = crop_cursor.y + 1; needs_drawing = true end
+-- bindings
+if opts.mouse_support then
+    bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); needs_drawing = true end
+end
+for _, key in ipairs(opts.accept) do
+    bindings[key] = update_crop_zone_state
+end
+for _, key in ipairs(opts.cancel) do
+    bindings[key] = cancel_crop
+end
+function movement_func(move_x, move_y)
+    return function()
+        crop_cursor.x = crop_cursor.x + move_x
+        crop_cursor.y = crop_cursor.y + move_y
+        needs_drawing = true
+    end
+end
+bindings_repeat[opts.left_coarse]  = movement_func(-opts.coarse_movement, 0)
+bindings_repeat[opts.right_coarse] = movement_func(opts.coarse_movement, 0)
+bindings_repeat[opts.up_coarse]    = movement_func(0, -opts.coarse_movement)
+bindings_repeat[opts.down_coarse]  = movement_func(0, opts.coarse_movement)
+bindings_repeat[opts.left_fine]    = movement_func(-opts.fine_movement, 0)
+bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
+bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
+bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
 
 local properties = {
     "keepaspect",
