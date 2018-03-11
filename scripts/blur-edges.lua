@@ -7,6 +7,7 @@ local opts = {
     mode = "all",
     active = true,
     reapply_delay = 0.5,
+    watch_later_fix = false,
 }
 options.read_options(opts)
 
@@ -22,7 +23,9 @@ function set_lavfi_complex(filter)
         mp.set_property("lavfi-complex", "")
         mp.set_property("vid", "1")
     else
-        mp.set_property("vid", "no")
+        if not opts.watch_later_fix then
+            mp.set_property("vid", "no")
+        end
         mp.set_property("lavfi-complex", filter)
     end
     mp.set_property("sub", "no")
