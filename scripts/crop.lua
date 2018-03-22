@@ -374,10 +374,10 @@ function start_crop()
     needs_drawing = true
     dimensions_changed = true
     for key, func in pairs(bindings) do
-        mp.add_forced_key_binding(key, "crop--"..key, func)
+        mp.add_forced_key_binding(key, "crop-"..key, func)
     end
     for key, func in pairs(bindings_repeat) do
-        mp.add_forced_key_binding(key, "crop--"..key, func, { repeatable = true })
+        mp.add_forced_key_binding(key, "crop-"..key, func, { repeatable = true })
     end
     mp.register_idle(draw_crop_zone)
     for _, p in ipairs(properties) do
