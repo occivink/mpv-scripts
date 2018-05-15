@@ -122,7 +122,7 @@ function start_encoding(from, to, settings)
     end
 
     local args = {
-        "ffmpeg",
+        settings.ffmpeg_command,
         "-loglevel", "panic", "-hide_banner",
         "-ss", seconds_to_time_string(from, false),
         "-i", path,
@@ -266,6 +266,7 @@ function set_timestamp(profile)
             codec = "-an -sn -c:v libvpx -crf 10 -b:v 1000k",
             output_format = "$f_$n",
             output_directory = "",
+            ffmpeg_command = "ffmpeg",
             print = true,
         }
         if profile then
