@@ -114,12 +114,18 @@ function seconds_to_time_string(seconds, full)
     return ret
 end
 
-function start_encoding(input_path, from, to, settings)
+function start_encoding(from, to, settings)
+    local path = mp.get_property("path")
+    local is_stream = not file_exists(path)
+    if is_stream then
+        path = mp.get_property("stream-path")
+    end
+
     local args = {
         "ffmpeg",
-        "-loglevel", "panic", "-hide_banner", --stfu ffmpeg
+        "-loglevel", "panic", "-hide_banner",
         "-ss", seconds_to_time_string(from, false),
-        "-i", input_path,
+        "-i", path,
         "-to", tostring(to-from)
     }
 
@@ -154,7 +160,11 @@ function start_encoding(input_path, from, to, settings)
     -- path of the output
     local output_directory = settings.output_directory
     if output_directory == "" then
-        output_directory, _ = utils.split_path(input_path)
+        if is_stream then
+            output_directory = "."
+        else
+            output_directory, _ = utils.split_path(path)
+        end
     else
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
@@ -208,8 +218,7 @@ function clear_timestamp()
 end
 
 function set_timestamp(profile)
-    local path = mp.get_property("path")
-    if not path then
+    if not mp.get_property("path") then
         mp.osd_message("No file currently playing")
         return
     end
@@ -265,10 +274,7 @@ function set_timestamp(profile)
         else
             settings.profile = "default"
         end
-        if not file_exists(path) then
-            path = mp.get_property("stream-path")
-        end
-        start_encoding(path, from, to, settings)
+        start_encoding(from, to, settings)
     end
 end
 
