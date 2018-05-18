@@ -1,4 +1,5 @@
 local utils = require "mp.utils"
+local msg = require "mp.msg"
 local options = require "mp.options"
 
 local start_timestamp = nil
@@ -25,7 +26,7 @@ function file_exists(name)
     end
 end
 
-function get_output_string(dir, format, input, title, from, to, profile)
+function get_output_string(dir, format, input, extension, title, from, to, profile)
     local res = utils.readdir(dir)
     if not res then
         return nil
@@ -40,13 +41,10 @@ function get_output_string(dir, format, input, title, from, to, profile)
     output = string.gsub(output, "$s", seconds_to_time_string(from, true))
     output = string.gsub(output, "$e", seconds_to_time_string(to, true))
     output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
+    output = string.gsub(output, "$x", extension)
     output = string.gsub(output, "$p", profile)
     if not string.find(output, "$n") then
-        if not files[output] then
-            return output
-        else
-            return nil
-        end
+        return files[output] and nil or output
     end
     local i = 1
     while true do
@@ -168,10 +166,10 @@ function start_encoding(from, to, settings)
     else
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
-    local output_name = string.format("%s.%s", settings.output_format, settings.container)
     local input_name = mp.get_property("filename/no-ext") or "encode"
+    local extension = string.match(path, "%.([^.]+)$")
     local title = mp.get_property("media-title")
-    output_name = get_output_string(output_directory, output_name, input_name, title, from, to, settings.profile)
+    local output_name = get_output_string(output_directory, settings.output_format, input_name, extension, title, from, to, settings.profile)
     if not output_name then
         mp.osd_message("Invalid path " .. output_directory)
         return
@@ -259,18 +257,22 @@ function set_timestamp(profile)
         to = to + 1 / fps / 2
         local settings = {
             detached = true,
-            container = "webm",
+            container = "",
             only_active_tracks = false,
             preserve_filters = true,
             append_filter = "",
             codec = "-an -sn -c:v libvpx -crf 10 -b:v 1000k",
-            output_format = "$f_$n",
+            output_format = "$f_$n.webm",
             output_directory = "",
             ffmpeg_command = "ffmpeg",
             print = true,
         }
         if profile then
             options.read_options(settings, profile)
+            if settings.container ~= "" then
+                msg.warn("The 'container' setting is deprecated, use 'output_format' now")
+                settings.output_format = settings.output_format .. "." .. settings.container
+            end
             settings.profile = profile
         else
             settings.profile = "default"
