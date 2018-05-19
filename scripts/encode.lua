@@ -26,6 +26,18 @@ function file_exists(name)
     end
 end
 
+function get_extension(path)
+    local candidate = string.match(path, "%.([^.]+)$")
+    if candidate then
+        for _, ext in ipairs({ "mkv", "webm", "mp4", "avi" }) do
+            if candidate == ext then
+                return candidate
+            end
+        end
+    end
+    return "mkv"
+end
+
 function get_output_string(dir, format, input, extension, title, from, to, profile)
     local res = utils.readdir(dir)
     if not res then
@@ -167,8 +179,8 @@ function start_encoding(from, to, settings)
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
     local input_name = mp.get_property("filename/no-ext") or "encode"
-    local extension = string.match(path, "%.([^.]+)$")
     local title = mp.get_property("media-title")
+    local extension = get_extension(path)
     local output_name = get_output_string(output_directory, settings.output_format, input_name, extension, title, from, to, settings.profile)
     if not output_name then
         mp.osd_message("Invalid path " .. output_directory)
