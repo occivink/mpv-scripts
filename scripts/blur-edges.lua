@@ -8,6 +8,7 @@ local opts = {
     active = true,
     reapply_delay = 0.5,
     watch_later_fix = false,
+    only_fullscreen = true,
 }
 options.read_options(opts)
 
@@ -36,6 +37,7 @@ end
 function set_blur()
     if applied then return end
     if not mp.get_property("video-out-params") then return end
+    if opts.only_fullscreen and not mp.get_property_bool("fullscreen") then return end
     local video_aspect = mp.get_property_number("video-aspect")
     local ww, wh = mp.get_osd_size()
 
@@ -104,7 +106,7 @@ function toggle()
     else
         active = true
         set_blur()
-        local properties = { "osd-width", "osd-height", "path" }
+        local properties = { "osd-width", "osd-height", "path", "fullscreen" }
         for _, p in ipairs(properties) do
             mp.observe_property(p, "native", reset_blur)
         end
