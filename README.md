@@ -26,7 +26,7 @@ Press the configured binding to set the beginning of the extract. Then, press EN
 
 By default, the script creates a webm compatible with certain imageboards. You can create different profiles depending on the type of encode you want to create. In particular, you can change the codecs used, which tracks are active and the filters to apply. 
 
-See `lua-settings/encode_webm.conf` for the default options and a description of them. `lua-settings/encode_slice.conf` contains another example profile. 
+See `script-opts/encode_webm.conf` for the default options and a description of them. `script-opts/encode_slice.conf` contains another example profile. 
 
 # seek-to.lua
 
@@ -39,14 +39,14 @@ Holds an internal history for timestamps that have been previously navigated, ac
 
 Automatically remove playlist entries by extension according to a black/whitelist. Useful when opening directories with mpv.
 
-The script doesn't do anything by default, you need to copy `lua-settings/blacklist_extensions.conf` and modify it to your liking.
+The script doesn't do anything by default, you need to copy `script-opts/blacklist_extensions.conf` and modify it to your liking.
 
 # blur-edges.lua
 
 Fills the black bars on the side of a video with a blurred copy of its edges.
 
 The script defines a `toggle-blur` command that you can bind.  
-It can be configured via `lua-settings/blur_edges.conf`.
+It can be configured via `script-opts/blur_edges.conf`.
 
 # misc.lua
 
