@@ -61,7 +61,7 @@ function set_blur()
         blur_size = blur_size / 2
 
         local height_with_maximized_width = height / width * ww
-        local visible_height = math.floor(height * wh / height_with_maximized_width)
+        local visible_height = math.floor(height * par * wh / height_with_maximized_width)
         local visible_width = math.floor(blur_size * wh / height_with_maximized_width)
 
         local cropped_1 = string.format(crop_format, visible_width, visible_height, "0", (height - visible_height)/2)
@@ -69,7 +69,7 @@ function set_blur()
         cropped_scaled_1 = cropped_1 .. "," .. scaled_1
 
         local cropped_2 = string.format(crop_format, visible_width, visible_height, width - visible_width, (height - visible_height)/2)
-        local scaled_2 = string.format(scale_format, blur_size , height)
+        local scaled_2 = string.format(scale_format, blur_size, height)
         cropped_scaled_2 = cropped_2 .. "," .. scaled_2
         stack_direction = "h"
     else
