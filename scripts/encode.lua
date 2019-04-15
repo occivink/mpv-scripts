@@ -97,28 +97,24 @@ function get_video_filters()
     return filters
 end
 
-function get_input_info(path, only_active)
+function get_input_info(default_path, only_active)
     local accepted = {
         video = true,
         audio = not mp.get_property_bool("mute"),
         sub = mp.get_property_bool("sub-visibility")
     }
     local ret = {}
-    ret[path] = {}
     for _, track in ipairs(mp.get_property_native("track-list")) do
-        local track_path = track["external-filename"] or path
-        if not only_active then
-            ret[track_path] = {}
-        elseif track["selected"] and accepted[track["type"]] then
-            local active_tracks = ret[track_path]
-            if not active_tracks then
+        local track_path = track["external-filename"] or default_path
+        if not only_active or (track["selected"] and accepted[track["type"]]) then
+            local tracks = ret[track_path]
+            if not tracks then
                 ret[track_path] = { track["ff-index"] }
             else
-                active_tracks[#active_tracks + 1] = track["ff-index"]
+                tracks[#tracks + 1] = track["ff-index"]
             end
         end
     end
-    print(utils.format_json(ret))
     return ret
 end
 
