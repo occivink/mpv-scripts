@@ -97,19 +97,25 @@ function get_video_filters()
     return filters
 end
 
-function get_active_tracks()
+function get_input_info(default_path, only_active)
     local accepted = {
         video = true,
         audio = not mp.get_property_bool("mute"),
         sub = mp.get_property_bool("sub-visibility")
     }
-    local active_tracks = {}
+    local ret = {}
     for _, track in ipairs(mp.get_property_native("track-list")) do
-        if track["selected"] and accepted[track["type"]] then
-            active_tracks[#active_tracks + 1] = string.format("0:%d", track["ff-index"])
+        local track_path = track["external-filename"] or default_path
+        if not only_active or (track["selected"] and accepted[track["type"]]) then
+            local tracks = ret[track_path]
+            if not tracks then
+                ret[track_path] = { track["ff-index"] }
+            else
+                tracks[#tracks + 1] = track["ff-index"]
+            end
         end
     end
-    return active_tracks
+    return ret
 end
 
 function seconds_to_time_string(seconds, full)
@@ -125,39 +131,49 @@ function seconds_to_time_string(seconds, full)
 end
 
 function start_encoding(from, to, settings)
+    local args = {
+        settings.ffmpeg_command,
+        "-loglevel", "panic", "-hide_banner",
+    }
+    local append_args = function(table) args = append_table(args, table) end
+
     local path = mp.get_property("path")
     local is_stream = not file_exists(path)
     if is_stream then
         path = mp.get_property("stream-path")
     end
 
-    local args = {
-        settings.ffmpeg_command,
-        "-loglevel", "panic", "-hide_banner",
-        "-ss", seconds_to_time_string(from, false),
-        "-i", path,
-        "-to", tostring(to-from)
-    }
-
-    -- map currently playing channels
-    if settings.only_active_tracks then
-        for _, t in ipairs(get_active_tracks()) do
-            args = append_table(args, { "-map", t })
+    local track_args = {}
+    local start = seconds_to_time_string(from, false)
+    local input_index = 0
+    for input_path, tracks in pairs(get_input_info(path, settings.only_active_tracks)) do
+       append_args({
+            "-ss", start,
+            "-i", input_path,
+        })
+        if settings.only_active_tracks then
+            for _, track_index in ipairs(tracks) do
+                track_args = append_table(track_args, { "-map", string.format("%d:%d", input_index, track_index)})
+            end
+        else
+            track_args = append_table(track_args, { "-map", tostring(input_index)})
         end
-    else
-        args = append_table(args, { "-map", "0" })
+        input_index = input_index + 1
     end
+
+    append_args({"-to", tostring(to-from)})
+    append_args(track_args)
 
     -- apply some of the video filters currently in the chain
     local filters = {}
     if settings.preserve_filters then
-        filters = append_table(filters, get_video_filters())
+        append_args(get_video_filters())
     end
     if settings.append_filter ~= "" then
         filters[#filters + 1] = settings.append_filter
     end
     if #filters > 0 then
-        args = append_table(args, {
+        append_args({
             "-filter:v", table.concat(filters, ",")
         })
     end
