@@ -70,8 +70,7 @@ end
 
 function get_video_filters()
     local filters = {}
-    local vf_table = mp.get_property_native("vf")
-    for _, vf in ipairs(vf_table) do
+    for _, vf in ipairs(mp.get_property_native("vf")) do
         local name = vf["name"]
         local filter
         if name == "crop" then
@@ -167,15 +166,13 @@ function start_encoding(from, to, settings)
     -- apply some of the video filters currently in the chain
     local filters = {}
     if settings.preserve_filters then
-        append_args(get_video_filters())
+        filters = get_video_filters()
     end
     if settings.append_filter ~= "" then
         filters[#filters + 1] = settings.append_filter
     end
     if #filters > 0 then
-        append_args({
-            "-filter:v", table.concat(filters, ",")
-        })
+        append_args({ "-filter:v", table.concat(filters, ",") })
     end
 
     -- split the user-passed settings on whitespace
@@ -214,7 +211,7 @@ function start_encoding(from, to, settings)
             elseif i >= 2 and i <= 4 then
                 fmt = "%s"
             elseif args[i-1] == "-i" or i == #args or args[i-1] == "-filter:v" then
-                fmt = "%s \"%s\""
+                fmt = "%s '%s'"
             else
                 fmt = "%s %s"
             end
