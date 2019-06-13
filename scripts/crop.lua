@@ -30,6 +30,7 @@ opts.accept = split(opts.accept)
 opts.cancel = split(opts.cancel)
 
 local assdraw = require 'mp.assdraw'
+local msg = require 'mp.msg'
 local needs_drawing = false
 local dimensions_changed = false
 local crop_first_corner = nil -- in video space
@@ -375,8 +376,14 @@ local properties = {
 }
 
 function start_crop()
-    crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
     if not mp.get_property("video-out-params", nil) then return end
+    local hwdec = mp.get_property("hwdec-current")
+    if hwdec and hwdec ~= "no" and not string.find(hwdec, "-copy$") then
+        msg.error("Cannot crop with hardware decoding active (see manual)")
+        return
+    end
+
+    crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
     needs_drawing = true
     dimensions_changed = true
     for key, func in pairs(bindings) do
