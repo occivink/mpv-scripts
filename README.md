@@ -16,6 +16,8 @@ UX largely inspired by [this script](https://github.com/aidanholm/mpv-easycrop),
 
 Press the binding to enter crop mode. Click once to define the first corner of the cropped zone, click a second time to define the second corner.  
 
+Note that [hardware decoding is in general not compatible with filters](https://mpv.io/manual/master/#options-hwdec), and will therefore not work with this script.
+
 # encode.lua
 
 **You need ffmpeg in your PATH (or in the same folder as mpv) for this script to work.**
