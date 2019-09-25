@@ -2,6 +2,8 @@ local utils = require "mp.utils"
 local msg = require "mp.msg"
 local options = require "mp.options"
 
+local ON_WINDOWS = (package.config:sub(1,1) ~= "/")
+
 local start_timestamp = nil
 local profile_start = ""
 
@@ -55,6 +57,9 @@ function get_output_string(dir, format, input, extension, title, from, to, profi
     output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
     output = string.gsub(output, "$x", extension)
     output = string.gsub(output, "$p", profile)
+    if ON_WINDOWS then
+        output = string.gsub(output, ":", "_")
+    end
     if not string.find(output, "$n") then
         return files[output] and nil or output
     end
