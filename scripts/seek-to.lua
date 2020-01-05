@@ -1,16 +1,17 @@
 local assdraw = require 'mp.assdraw'
 local active = false
-local cursor_position = 1
-local time_scale = {60*60*10, 60*60, 60*10, 60, 10, 1, 0.1, 0.01, 0.001}
+local mode = "time"
+local time_scale = { 60*60*10, 60*60, 60*10, 60, 10, 1 }
 
 local ass_begin = mp.get_property("osd-ass-cc/0")
 local ass_end = mp.get_property("osd-ass-cc/1")
 
-local history = { {} }
-for i = 1, 9 do
-    history[1][i] = 0
-end
-local history_position = 1
+local history = {
+    ["time"] = {},
+    ["percent"] = {}
+}
+local histpos = false
+local edit = ""
 
 -- timer to redraw periodically the message
 -- to avoid leaving bindings when the seeker disappears for whatever reason
@@ -18,106 +19,92 @@ local history_position = 1
 local timer = nil
 local timer_duration = 3
 
-function show_seeker()
-    local prepend_char = {'','',':','',':','','.','',''}
-    local str = ''
-    for i = 1, 9 do
-        str = str .. prepend_char[i]
-        if i == cursor_position then
-            str = str .. '{\\b1}' .. history[history_position][i] .. '{\\r}'
-        else
-            str = str .. history[history_position][i]
+function format(time)
+    if mode == "percent" then
+        return (#time == 0 and '0' or '')..tostring(time)..'%'
+    elseif mode == "time" then
+        local s = time
+        for i = 1, 6 - #s do
+            s = '0'..s
         end
+        return string.sub(s, 1, 2)..':'..string.sub(s, 3, 4)..':'..string.sub(s, 5, 6)
     end
-    mp.osd_message("Seek to: " .. ass_begin .. str .. ass_end, timer_duration)
 end
 
-function copy_history_to_last()
-    if history_position ~= #history then
-        for i = 1, 9 do
-            history[#history][i] = history[history_position][i]
-        end
-        history_position = #history
+function show_seeker()
+    time = histpos and history[mode][histpos] or edit
+    mp.osd_message("Seek to: "..ass_begin..format(time)..ass_end, timer_duration)
+end
+
+function edithist()
+    if histpos then
+        edit = history[mode][histpos]
+        histpos = false
     end
 end
 
 function change_number(i)
-    -- can't set above 60 minutes or seconds
-    if (cursor_position == 3 or cursor_position == 5) and i >= 6 then
+    if i == 0 and #edit == 0 then
         return
     end
-    if history[history_position][cursor_position] ~= i then
-        copy_history_to_last()
-        history[#history][cursor_position] = i
+    if mode == "time" and #edit >= 6 then
+        return
     end
-    shift_cursor(false)
+    edit = edit..tostring(i)
 end
 
-function shift_cursor(left)
-    if left then
-        cursor_position = math.max(1, cursor_position - 1)
-    else
-        cursor_position = math.min(cursor_position + 1, 9)
-    end
-end
-
-function current_time_as_sec(time)
+function time_as_sec(time)
     local sec = 0
-    for i = 1, 9 do
-        sec = sec + time_scale[i] * time[i]
+    for i = 1, #time do
+        sec = sec + (tonumber(string.sub(time, i, i)) * time_scale[#time_scale - (#time - i)])
     end
     return sec
 end
 
-function time_equal(lhs, rhs)
-    for i = 1, 9 do
-        if lhs[i] ~= rhs[i] then
-            return false
+function seek_to()
+    if mode == "percent" then
+        local d = mp.get_property_number("duration")
+        mp.commandv("osd-bar", "seek", (tonumber(edit) / 100) * d, "absolute")
+    elseif mode == "time" then
+        mp.commandv("osd-bar", "seek", time_as_sec(edit), "absolute")
+    end
+    --deduplicate historical timestamps
+    for i = #history[mode], 1, -1 do
+        if history[mode][i] == edit then
+            table.remove(history[mode], i)
         end
     end
-    return true
-end
-
-function seek_to()
-    copy_history_to_last()
-    mp.commandv("osd-bar", "seek", current_time_as_sec(history[history_position]), "absolute")
-    --deduplicate consecutive timestamps
-    if #history == 1 or not time_equal(history[history_position], history[#history - 1]) then
-        history[#history + 1] = {}
-        history_position = #history
-    end
-    for i = 1, 9 do
-        history[#history][i] = 0
-    end
+    table.insert(history[mode], edit)
 end
 
 function backspace()
-    if cursor_position ~= 9 or current_time[9] == 0 then
-        shift_cursor(true)
-    end
-    if history[history_position][cursor_position] ~= 0 then
-        copy_history_to_last()
-        history[#history][cursor_position] = 0
-    end
+    edit = string.sub(edit, 1, #(edit) - 1)
 end
 
 function history_move(up)
+    if not histpos and up then histpos = #history[mode] goto ret end
+    if not histpos then goto ret end
     if up then
-        history_position = math.max(1, history_position - 1)
+        histpos = math.max(1, histpos - 1)
     else
-        history_position = math.min(history_position + 1, #history)
+        if histpos == #history[mode] then histpos = false goto ret end
+        histpos = math.min(histpos + 1, #history[mode])
+    end
+    ::ret::
+    print('History:')
+    for i = 1, #history[mode] do
+        print('  '..(i == histpos and '*' or ' ')..(mode == "percent" and '%' or 'T')..' '..history[mode][i])
     end
 end
 
 local key_mappings = {
-    LEFT  = function() shift_cursor(true) show_seeker() end,
-    RIGHT = function() shift_cursor(false) show_seeker() end,
-    UP    = function() history_move(true) show_seeker() end,
-    DOWN  = function() history_move(false) show_seeker() end,
-    BS    = function() backspace() show_seeker() end,
+    BS    = function() edithist() backspace() show_seeker() end,
     ESC   = function() set_inactive() end,
-    ENTER = function() seek_to() set_inactive() end
+    ENTER = function() edithist() seek_to() set_inactive() end,
+    UP    = function() history_move(true) show_seeker() end,
+    DOWN  = function() history_move(false) show_seeker() end
 }
+
 for i = 0, 9 do
     local func = function() change_number(i) show_seeker() end
     key_mappings[string.format("KP%d", i)] = func
@@ -125,17 +112,8 @@ for i = 0, 9 do
 end
 
 function set_active()
+    edit = ""
     if not mp.get_property("seekable") then return end
-    -- find duration of the video and set cursor position accordingly
-    local duration = mp.get_property_number("duration")
-    if duration ~= nil then
-        for i = 1, 9 do
-            if duration > time_scale[i] then
-                cursor_position = i
-                break
-            end
-        end
-    end
     for key, func in pairs(key_mappings) do
         mp.add_forced_key_binding(key, "seek-to-"..key, func)
     end
@@ -150,8 +128,9 @@ function set_inactive()
         mp.remove_key_binding("seek-to-"..key)
     end
     timer:kill()
+    histpos = false
     active = false
 end
 
-mp.add_key_binding(nil, "toggle-seeker", function() if active then set_inactive() else set_active() end end)
-
+mp.add_key_binding(nil, "toggle-seeker", function() if active then set_inactive() else mode = "time" set_active() end end)
+mp.add_key_binding(nil, "toggle-seeker-percent", function() if active then set_inactive() else mode = "percent" set_active() end end)
