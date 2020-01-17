@@ -6,6 +6,7 @@ local time_scale = { 60*60*10, 60*60, 60*10, 60, 10, 1 }
 local ass_begin = mp.get_property("osd-ass-cc/0")
 local ass_end = mp.get_property("osd-ass-cc/1")
 
+local last_mode = ""
 local history = {
     ["time"] = {},
     ["percent"] = {}
@@ -20,14 +21,19 @@ local timer = nil
 local timer_duration = 3
 
 function format(time)
+    local rel = ""
+    if string.sub(time, 1, 1) == "+" or string.sub(time, 1, 1) == "-" then
+      rel = string.sub(time, 1, 1)
+      time = string.sub(time, 2, #time)
+    end
     if mode == "percent" then
-        return (#time == 0 and '0' or '')..tostring(time)..'%'
+        return rel..(#time == 0 and '0' or '')..tostring(time)..'%'
     elseif mode == "time" then
         local s = time
         for i = 1, 6 - #s do
             s = '0'..s
         end
-        return string.sub(s, 1, 2)..':'..string.sub(s, 3, 4)..':'..string.sub(s, 5, 6)
+        return rel..string.sub(s, 1, 2)..':'..string.sub(s, 3, 4)..':'..string.sub(s, 5, 6)
     end
 end
 
@@ -44,6 +50,9 @@ function edithist()
 end
 
 function change_number(i)
+    if (i == '+' or i == '-') and #edit ~= 0 then
+      return
+    end
     if i == 0 and #edit == 0 then
         return
     end
@@ -62,19 +71,41 @@ function time_as_sec(time)
 end
 
 function seek_to()
+    local time = 0
+    local rel = ""
+    if string.sub(edit, 1, 1) == "+" or string.sub(edit, 1, 1) == "-" then
+      rel = string.sub(edit, 1, 1)
+      edit = string.sub(edit, 2, #edit)
+    end
     if mode == "percent" then
         local d = mp.get_property_number("duration")
-        mp.commandv("osd-bar", "seek", (tonumber(edit) / 100) * d, "absolute")
+        time = (tonumber(edit) / 100) * d
     elseif mode == "time" then
-        mp.commandv("osd-bar", "seek", time_as_sec(edit), "absolute")
+        time = time_as_sec(edit)
     end
+    if #rel ~= 0 then
+      time = mp.get_property_number("time-pos") + (time * (rel == "+" and 1 or -1))
+    end
+    mp.commandv("osd-bar", "seek", time, "absolute")
     --deduplicate historical timestamps
+    edit = rel..edit
     for i = #history[mode], 1, -1 do
         if history[mode][i] == edit then
             table.remove(history[mode], i)
         end
     end
     table.insert(history[mode], edit)
+    last_mode = mode
+end
+
+function seek_last()
+  if #last_mode == 0 or #history[last_mode] == 0 or active then
+    return
+  end
+
+  mode = last_mode
+  edit = history[mode][#history[mode]]
+  seek_to()
 end
 
 function backspace()
@@ -82,18 +113,13 @@ function backspace()
 end
 
 function history_move(up)
-    if not histpos and up then histpos = #history[mode] goto ret end
-    if not histpos then goto ret end
+    if not histpos and up then histpos = #history[mode] return end
+    if not histpos then return end
     if up then
         histpos = math.max(1, histpos - 1)
     else
-        if histpos == #history[mode] then histpos = false goto ret end
+        if histpos == #history[mode] then histpos = false return end
         histpos = math.min(histpos + 1, #history[mode])
-    end
-    ::ret::
-    print('History:')
-    for i = 1, #history[mode] do
-        print('  '..(i == histpos and '*' or ' ')..(mode == "percent" and '%' or 'T')..' '..history[mode][i])
     end
 end
 
@@ -102,7 +128,9 @@ local key_mappings = {
     ESC   = function() set_inactive() end,
     ENTER = function() edithist() seek_to() set_inactive() end,
     UP    = function() history_move(true) show_seeker() end,
-    DOWN  = function() history_move(false) show_seeker() end
+    DOWN  = function() history_move(false) show_seeker() end,
+    ["+"] = function() change_number("+") show_seeker() end,
+    ["-"] = function() change_number("-") show_seeker() end
 }
 
 for i = 0, 9 do
@@ -134,3 +162,4 @@ end
 
 mp.add_key_binding(nil, "toggle-seeker", function() if active then set_inactive() else mode = "time" set_active() end end)
 mp.add_key_binding(nil, "toggle-seeker-percent", function() if active then set_inactive() else mode = "percent" set_active() end end)
+mp.add_key_binding(nil, "seek-last", function() seek_last() end)
