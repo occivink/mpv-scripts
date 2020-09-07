@@ -127,7 +127,10 @@ function toggle()
         active = false
         unset_blur()
         mp.unobserve_property(reset_blur)
+        mp.set_property("hwdec", orig_value_hwdec)
     else
+        orig_value_hwdec = mp.get_property("hwdec")
+        mp.set_property("hwdec", "no")
         active = true
         set_blur()
         local properties = { "osd-width", "osd-height", "path", "fullscreen" }
