@@ -241,13 +241,13 @@ function draw_crop_zone()
 
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
-        crop_cursor = clamp_point(video_dim.top_left, crop_cursor, video_dim.bottom_right)
+        local cursor = clamp_point(video_dim.top_left, crop_cursor, video_dim.bottom_right)
         local ass = assdraw.ass_new()
 
         if opts.draw_shade and crop_first_corner then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
             local unshaded = {}
-            unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, crop_cursor)
+            unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, cursor)
             -- don't draw shade over non-visible video parts
             local window = {
                 top_left = { x = 0, y = 0 },
@@ -261,11 +261,11 @@ function draw_crop_zone()
         end
 
         if opts.draw_crosshair then
-            draw_crosshair(ass, crop_cursor, window_size)
+            draw_crosshair(ass, cursor, window_size)
         end
 
         if opts.draw_text then
-            cursor_video = screen_to_video(crop_cursor, video_dim)
+            local cursor_video = screen_to_video(cursor, video_dim)
             local text = string.format("%d, %d", cursor_video.x, cursor_video.y)
             if crop_first_corner then
                 text = string.format("%s (%dx%d)", text,
@@ -273,7 +273,7 @@ function draw_crop_zone()
                     math.abs(cursor_video.y - crop_first_corner.y)
                 )
             end
-            draw_position_text(ass, text, crop_cursor, window_size, 6)
+            draw_position_text(ass, text, cursor, window_size, 6)
         end
 
         mp.set_osd_ass(window_size.w, window_size.h, ass.text)
@@ -301,8 +301,7 @@ function update_crop_zone_state()
         cancel_crop()
         return
     end
-    crop_cursor = clamp_point(dim.top_left, crop_cursor, dim.bottom_right)
-    corner_video = screen_to_video(crop_cursor, dim)
+    local corner_video = screen_to_video(clamp_point(dim.top_left, crop_cursor, dim.bottom_right), dim)
     if crop_first_corner == nil then
         crop_first_corner = corner_video
         needs_drawing = true
