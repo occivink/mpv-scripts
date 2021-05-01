@@ -1,7 +1,10 @@
 local opts = {
-    mode = "soft", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan
+    mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan
     draw_shade = true,
     shade_opacity = "77",
+    draw_frame = false,
+    frame_border_width = 2,
+    frame_border_color = "EEEEEE",
     draw_crosshair = true,
     draw_text = true,
     mouse_support=true,
@@ -192,7 +195,7 @@ function position_to_ensure_ratio(moving, fixed, ratio)
         y = y,
     }
 end
-function draw_shade(ass, unshaded, video)
+function draw_shade(ass, unshaded, window)
     ass:new_event()
     ass:pos(0, 0)
     ass:append("{\\bord0}")
@@ -203,7 +206,7 @@ function draw_shade(ass, unshaded, video)
     ass:append("{\\3a&HFF}")
     ass:append("{\\4a&HFF}")
     local c1, c2 = unshaded.top_left, unshaded.bottom_right
-    local v = video
+    local v = window
     --          c1.x   c2.x
     --     +-----+------------+
     --     |     |     ur     |
@@ -220,6 +223,26 @@ function draw_shade(ass, unshaded, video)
     ass:draw_stop()
     -- also possible to draw a rect over the whole video
     -- and \iclip it in the middle, but seemingy slower
+end
+
+function draw_frame(ass, frame)
+    ass:new_event()
+    ass:pos(0, 0)
+    ass:append("{\\bord0}")
+    ass:append("{\\shad0}")
+    ass:append("{\\c&H" .. opts.frame_border_color .. "&}")
+    ass:append("{\\1a&H00&}")
+    ass:append("{\\2a&HFF&}")
+    ass:append("{\\3a&HFF&}")
+    ass:append("{\\4a&HFF&}")
+    local c1, c2 = frame.top_left, frame.bottom_right
+    local b = opts.frame_border_width
+    ass:draw_start()
+    ass:rect_cw(c1.x, c1.y - b, c2.x + b, c1.y)
+    ass:rect_cw(c2.x, c1.y, c2.x + b, c2.y + b)
+    ass:rect_cw(c1.x - b, c2.y, c2.x, c2.y + b)
+    ass:rect_cw(c1.x - b, c1.y - b, c1.x, c2.y)
+    ass:draw_stop()
 end
 
 function draw_crosshair(ass, center, window_size)
@@ -281,21 +304,23 @@ function draw_crop_zone()
         end
         local ass = assdraw.ass_new()
 
-        if opts.draw_shade and crop_first_corner then
+        if crop_first_corner and (opts.draw_shade or opts.draw_frame) then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
-            local unshaded = {}
-            unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, cursor)
+            local frame = {}
+            frame.top_left, frame.bottom_right = sort_corners(first_corner, cursor)
             -- don't draw shade over non-visible video parts
-            local window = {
-                top_left = { x = 0, y = 0 },
-                bottom_right = { x = window_size.w, y = window_size.h },
-            }
-            local video_visible = {
-                top_left = clamp_point(window.top_left, video_dim.top_left, window.bottom_right),
-                bottom_right = clamp_point(window.top_left, video_dim.bottom_right, window.bottom_right),
-            }
-            draw_shade(ass, unshaded, video_visible)
+            if opts.draw_shade then
+                local window = {
+                    top_left = { x = 0, y = 0 },
+                    bottom_right = { x = window_size.w, y = window_size.h },
+                }
+                draw_shade(ass, frame, window)
+            end
+            if opts.draw_frame then
+                draw_frame(ass, frame)
+            end
         end
+
 
         if opts.draw_crosshair then
             draw_crosshair(ass, cursor, window_size)
