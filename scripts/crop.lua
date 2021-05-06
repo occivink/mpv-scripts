@@ -1,6 +1,10 @@
 local opts = {
+    mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan
     draw_shade = true,
     shade_opacity = "77",
+    draw_frame = false,
+    frame_border_width = 2,
+    frame_border_color = "EEEEEE",
     draw_crosshair = true,
     draw_text = true,
     mouse_support=true,
@@ -26,11 +30,15 @@ function split(input)
     end
     return ret
 end
+local msg = require 'mp.msg'
+
 opts.accept = split(opts.accept)
 opts.cancel = split(opts.cancel)
+if opts.mode ~= "soft" and opts.mode ~= "hard" then
+    mp.msg("Invalid mode value")
+end
 
 local assdraw = require 'mp.assdraw'
-local msg = require 'mp.msg'
 local needs_drawing = false
 local dimensions_changed = false
 local crop_first_corner = nil -- in video space
@@ -57,6 +65,8 @@ function get_video_dimensions()
     _video_dimensions = {
         top_left = {},
         bottom_right = {},
+        size = {},
+        original_size = {},
         ratios = {},
     }
     if keep_aspect then
@@ -122,6 +132,10 @@ function get_video_dimensions()
         _video_dimensions.top_left.y = 0
         _video_dimensions.bottom_right.y = window_h
     end
+    _video_dimensions.size.w = _video_dimensions.bottom_right.x - _video_dimensions.top_left.x
+    _video_dimensions.size.h = _video_dimensions.bottom_right.y - _video_dimensions.top_left.y
+    _video_dimensions.original_size.w = w
+    _video_dimensions.original_size.h = h
     _video_dimensions.ratios.w = w / (_video_dimensions.bottom_right.x - _video_dimensions.top_left.x)
     _video_dimensions.ratios.h = h / (_video_dimensions.bottom_right.y - _video_dimensions.top_left.y)
     return _video_dimensions
@@ -165,7 +179,23 @@ function video_to_screen(point, video_dim)
     }
 end
 
-function draw_shade(ass, unshaded, video)
+function position_to_ensure_ratio(moving, fixed, ratio)
+    -- corners are in screen coordinates
+    local x = moving.x
+    local y = moving.y
+    if math.abs(x - fixed.x) < ratio * math.abs(y - fixed.y) then
+        local is_left = x < fixed.x and -1 or 1
+        x = fixed.x + is_left * math.abs(y - fixed.y) * ratio
+    else
+        local is_up = y < fixed.y and -1 or 1
+        y = fixed.y + is_up * math.abs(x - fixed.x) / ratio
+    end
+    return {
+        x = x,
+        y = y,
+    }
+end
+function draw_shade(ass, unshaded, window)
     ass:new_event()
     ass:pos(0, 0)
     ass:append("{\\bord0}")
@@ -176,7 +206,7 @@ function draw_shade(ass, unshaded, video)
     ass:append("{\\3a&HFF}")
     ass:append("{\\4a&HFF}")
     local c1, c2 = unshaded.top_left, unshaded.bottom_right
-    local v = video
+    local v = window
     --          c1.x   c2.x
     --     +-----+------------+
     --     |     |     ur     |
@@ -193,6 +223,26 @@ function draw_shade(ass, unshaded, video)
     ass:draw_stop()
     -- also possible to draw a rect over the whole video
     -- and \iclip it in the middle, but seemingy slower
+end
+
+function draw_frame(ass, frame)
+    ass:new_event()
+    ass:pos(0, 0)
+    ass:append("{\\bord0}")
+    ass:append("{\\shad0}")
+    ass:append("{\\c&H" .. opts.frame_border_color .. "&}")
+    ass:append("{\\1a&H00&}")
+    ass:append("{\\2a&HFF&}")
+    ass:append("{\\3a&HFF&}")
+    ass:append("{\\4a&HFF&}")
+    local c1, c2 = frame.top_left, frame.bottom_right
+    local b = opts.frame_border_width
+    ass:draw_start()
+    ass:rect_cw(c1.x, c1.y - b, c2.x + b, c1.y)
+    ass:rect_cw(c2.x, c1.y, c2.x + b, c2.y + b)
+    ass:rect_cw(c1.x - b, c2.y, c2.x, c2.y + b)
+    ass:rect_cw(c1.x - b, c1.y - b, c1.x, c2.y)
+    ass:draw_stop()
 end
 
 function draw_crosshair(ass, center, window_size)
@@ -239,26 +289,38 @@ function draw_crop_zone()
             return
         end
 
+        local cursor = {
+            x = crop_cursor.x,
+            y = crop_cursor.y,
+        }
         local window_size = {}
         window_size.w, window_size.h = mp.get_osd_size()
-        local cursor = clamp_point(video_dim.top_left, crop_cursor, video_dim.bottom_right)
+        if opts.mode == "soft" then
+            if crop_first_corner then
+                cursor = position_to_ensure_ratio(cursor, video_to_screen(crop_first_corner, video_dim), window_size.w / window_size.h)
+            end
+        elseif opts.mode == "hard" then
+            cursor = clamp_point(video_dim.top_left, cursor, video_dim.bottom_right)
+        end
         local ass = assdraw.ass_new()
 
-        if opts.draw_shade and crop_first_corner then
+        if crop_first_corner and (opts.draw_shade or opts.draw_frame) then
             local first_corner = video_to_screen(crop_first_corner, video_dim)
-            local unshaded = {}
-            unshaded.top_left, unshaded.bottom_right = sort_corners(first_corner, cursor)
+            local frame = {}
+            frame.top_left, frame.bottom_right = sort_corners(first_corner, cursor)
             -- don't draw shade over non-visible video parts
-            local window = {
-                top_left = { x = 0, y = 0 },
-                bottom_right = { x = window_size.w, y = window_size.h },
-            }
-            local video_visible = {
-                top_left = clamp_point(window.top_left, video_dim.top_left, window.bottom_right),
-                bottom_right = clamp_point(window.top_left, video_dim.bottom_right, window.bottom_right),
-            }
-            draw_shade(ass, unshaded, video_visible)
+            if opts.draw_shade then
+                local window = {
+                    top_left = { x = 0, y = 0 },
+                    bottom_right = { x = window_size.w, y = window_size.h },
+                }
+                draw_shade(ass, frame, window)
+            end
+            if opts.draw_frame then
+                draw_frame(ass, frame)
+            end
         end
+
 
         if opts.draw_crosshair then
             draw_crosshair(ass, cursor, window_size)
@@ -282,17 +344,30 @@ function draw_crop_zone()
 end
 
 function crop_video(x, y, w, h)
-    local vf_table = mp.get_property_native("vf")
-    vf_table[#vf_table + 1] = {
-        name="crop",
-        params= {
-            x = tostring(x),
-            y = tostring(y),
-            w = tostring(w),
-            h = tostring(h)
+    if opts.mode == "soft" then
+        local dim = get_video_dimensions()
+        if not dim then return end
+        local window_size = {}
+        window_size.w, window_size.h = mp.get_osd_size()
+        local zoom = mp.get_property_number("video-zoom")
+        local newZoom1 = math.log(window_size.h * (2 ^ zoom) * dim.ratios.h / h) / math.log(2)
+        local newZoom2 = math.log(window_size.w * (2 ^ zoom) * dim.ratios.w / w) / math.log(2)
+        mp.set_property("video-zoom", (newZoom1 + newZoom2) / 2) -- they should be ~ the same, but let's not play favorites
+        mp.set_property("video-pan-x", 0.5 - (x + w / 2) / dim.original_size.w )
+        mp.set_property("video-pan-y", 0.5 - (y + h / 2) / dim.original_size.h )
+    elseif opts.mode == "hard" then
+        local vf_table = mp.get_property_native("vf")
+        vf_table[#vf_table + 1] = {
+            name="crop",
+            params= {
+                x = tostring(x),
+                y = tostring(y),
+                w = tostring(w),
+                h = tostring(h)
+            }
         }
-    }
-    mp.set_property_native("vf", vf_table)
+        mp.set_property_native("vf", vf_table)
+    end
 end
 
 function update_crop_zone_state()
@@ -301,7 +376,18 @@ function update_crop_zone_state()
         cancel_crop()
         return
     end
-    local corner_video = screen_to_video(clamp_point(dim.top_left, crop_cursor, dim.bottom_right), dim)
+    local corner
+    if opts.mode == "soft" then
+        if crop_first_corner then
+            local ww, wh = mp.get_osd_size()
+            corner = position_to_ensure_ratio(crop_cursor, video_to_screen(crop_first_corner, dim), ww / wh)
+        else
+            corner = crop_cursor
+        end
+    elseif opts.mode == "hard" then
+        corner = clamp_point(dim.top_left, crop_cursor, dim.bottom_right)
+    end
+    local corner_video = screen_to_video(corner, dim)
     if crop_first_corner == nil then
         crop_first_corner = corner_video
         needs_drawing = true
