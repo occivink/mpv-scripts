@@ -314,32 +314,6 @@ end
 local bindings = {}
 local bindings_repeat = {}
 
--- bindings
-if opts.mouse_support then
-    bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); redraw() end
-end
-for _, key in ipairs(opts.accept) do
-    bindings[key] = update_crop_zone_state
-end
-for _, key in ipairs(opts.cancel) do
-    bindings[key] = cancel_crop
-end
-function movement_func(move_x, move_y)
-    return function()
-        crop_cursor.x = crop_cursor.x + move_x
-        crop_cursor.y = crop_cursor.y + move_y
-        redraw()
-    end
-end
-bindings_repeat[opts.left_coarse]  = movement_func(-opts.coarse_movement, 0)
-bindings_repeat[opts.right_coarse] = movement_func(opts.coarse_movement, 0)
-bindings_repeat[opts.up_coarse]    = movement_func(0, -opts.coarse_movement)
-bindings_repeat[opts.down_coarse]  = movement_func(0, opts.coarse_movement)
-bindings_repeat[opts.left_fine]    = movement_func(-opts.fine_movement, 0)
-bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
-bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
-bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
-
 function cancel_crop()
     crop_first_corner = nil
     for key, _ in pairs(bindings) do
@@ -391,6 +365,33 @@ function toggle_crop()
     end
     start_crop()
 end
+
+-- bindings
+if opts.mouse_support then
+    bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); redraw() end
+end
+for _, key in ipairs(opts.accept) do
+    bindings[key] = update_crop_zone_state
+end
+for _, key in ipairs(opts.cancel) do
+    bindings[key] = cancel_crop
+end
+function movement_func(move_x, move_y)
+    return function()
+        crop_cursor.x = crop_cursor.x + move_x
+        crop_cursor.y = crop_cursor.y + move_y
+        redraw()
+    end
+end
+bindings_repeat[opts.left_coarse]  = movement_func(-opts.coarse_movement, 0)
+bindings_repeat[opts.right_coarse] = movement_func(opts.coarse_movement, 0)
+bindings_repeat[opts.up_coarse]    = movement_func(0, -opts.coarse_movement)
+bindings_repeat[opts.down_coarse]  = movement_func(0, opts.coarse_movement)
+bindings_repeat[opts.left_fine]    = movement_func(-opts.fine_movement, 0)
+bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
+bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
+bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
+
 
 mp.add_key_binding(nil, "start-crop", start_crop)
 mp.add_key_binding(nil, "toggle-crop", toggle_crop)
