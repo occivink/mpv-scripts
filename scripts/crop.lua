@@ -1,5 +1,5 @@
 local opts = {
-    mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan
+    mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan. Or a bonus "delogo" mode
     draw_shade = true,
     shade_opacity = "77",
     draw_frame = false,
@@ -34,7 +34,7 @@ local msg = require 'mp.msg'
 
 opts.accept = split(opts.accept)
 opts.cancel = split(opts.cancel)
-if opts.mode ~= "soft" and opts.mode ~= "hard" then
+if opts.mode ~= "soft" and opts.mode ~= "hard" and opts.mode ~= "delogo" then
     mp.msg("Invalid mode value")
 end
 
@@ -210,7 +210,7 @@ function draw_crop_zone()
             if crop_first_corner then
                 cursor = position_to_ensure_ratio(cursor, video_norm_to_screen(crop_first_corner, dim), dim.w / dim.h)
             end
-        elseif opts.mode == "hard" then
+        elseif opts.mode == "hard" or opts.mode == "delogo" then
             cursor = clamp_point({ x = dim.ml, y = dim.mt }, cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
         end
         local ass = assdraw.ass_new()
@@ -268,11 +268,11 @@ function crop_video(x, y, w, h, dim)
         mp.set_property("video-zoom", (newZoom1 + newZoom2) / 2) -- they should be ~ the same, but let's not play favorites
         mp.set_property("video-pan-x", 0.5 - (x + w / 2))
         mp.set_property("video-pan-y", 0.5 - (y + h / 2))
-    elseif opts.mode == "hard" then
+    elseif opts.mode == "hard" or opts.mode == "delogo" then
         local vop = mp.get_property_native("video-out-params")
         local vf_table = mp.get_property_native("vf")
         vf_table[#vf_table + 1] = {
-            name="crop",
+            name=(opts.mode == "hard") and "crop" or "delogo",
             params= {
                 x = tostring(x * vop.w),
                 y = tostring(y * vop.h),
@@ -297,7 +297,7 @@ function update_crop_zone_state()
         else
             corner = crop_cursor
         end
-    elseif opts.mode == "hard" then
+    elseif opts.mode == "hard" or opts.mode == "delogo" then
         corner = clamp_point({ x = dim.ml, y = dim.mt }, crop_cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
     end
     local corner_video = screen_to_video_norm(corner, dim)
@@ -350,10 +350,12 @@ function start_crop()
 end
 
 function toggle_crop()
+    if opts.mode == "soft" then return end
+    local filter_name = (opts.mode == "hard") and "crop" or "delogo"
     local vf_table = mp.get_property_native("vf")
     if #vf_table > 0 then
         for i = #vf_table, 1, -1 do
-            if vf_table[i].name == "crop" then
+            if vf_table[i].name == filter_name then
                 for j = i, #vf_table-1 do
                     vf_table[j] = vf_table[j+1]
                 end
