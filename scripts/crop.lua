@@ -34,11 +34,17 @@ local msg = require 'mp.msg'
 
 opts.accept = split(opts.accept)
 opts.cancel = split(opts.cancel)
-if opts.mode ~= "soft" and opts.mode ~= "hard" and opts.mode ~= "delogo" then
-    mp.msg("Invalid mode value")
+function mode_ok(mode)
+    return mode == "soft" or mode == "hard" or mode == "delogo"
+end
+if not mode_ok(opts.mode) then
+    msg.error("Invalid mode value: " .. opts.mode)
+    return
 end
 
 local assdraw = require 'mp.assdraw'
+local active = false
+local active_mode = "" -- same possible values as opts.mode
 local needs_drawing = false
 local crop_first_corner = nil -- in normalized video space
 local crop_cursor = {
@@ -206,11 +212,11 @@ function draw_crop_zone()
             x = crop_cursor.x,
             y = crop_cursor.y,
         }
-        if opts.mode == "soft" then
+        if active_mode == "soft" then
             if crop_first_corner then
                 cursor = position_to_ensure_ratio(cursor, video_norm_to_screen(crop_first_corner, dim), dim.w / dim.h)
             end
-        elseif opts.mode == "hard" or opts.mode == "delogo" then
+        elseif active_mode == "hard" or active_mode == "delogo" then
             cursor = clamp_point({ x = dim.ml, y = dim.mt }, cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
         end
         local ass = assdraw.ass_new()
@@ -258,7 +264,7 @@ function draw_crop_zone()
 end
 
 function crop_video(x, y, w, h, dim)
-    if opts.mode == "soft" then
+    if active_mode == "soft" then
         local dim = mp.get_property_native("osd-dimensions")
         if not dim then return end
 
@@ -268,17 +274,25 @@ function crop_video(x, y, w, h, dim)
         mp.set_property("video-zoom", (newZoom1 + newZoom2) / 2) -- they should be ~ the same, but let's not play favorites
         mp.set_property("video-pan-x", 0.5 - (x + w / 2))
         mp.set_property("video-pan-y", 0.5 - (y + h / 2))
-    elseif opts.mode == "hard" or opts.mode == "delogo" then
+    elseif active_mode == "hard" or active_mode == "delogo" then
         local vop = mp.get_property_native("video-out-params")
         local vf_table = mp.get_property_native("vf")
+        local x = math.floor(x * vop.w)
+        local y = math.floor(y * vop.h)
+        local w = math.floor(w * vop.w)
+        local h = math.floor(h * vop.h)
+        if active_mode == "delogo" then
+            -- delogo is a little special and needs some padding to function
+            w = math.min(vop.w - 1, w)
+            h = math.min(vop.h - 1, h)
+            x = math.max(1, x)
+            y = math.max(1, y)
+            if x + w == vop.w then w = w - 1 end
+            if y + h == vop.h then h = h - 1 end
+        end
         vf_table[#vf_table + 1] = {
-            name=(opts.mode == "hard") and "crop" or "delogo",
-            params= {
-                x = tostring(x * vop.w),
-                y = tostring(y * vop.h),
-                w = tostring(w * vop.w),
-                h = tostring(h * vop.h)
-            }
+            name=(active_mode == "hard") and "crop" or "delogo",
+            params= { x = tostring(x), y = tostring(y), w = tostring(w), h = tostring(h) }
         }
         mp.set_property_native("vf", vf_table)
     end
@@ -291,13 +305,13 @@ function update_crop_zone_state()
         return
     end
     local corner
-    if opts.mode == "soft" then
+    if active_mode == "soft" then
         if crop_first_corner then
             corner = position_to_ensure_ratio(crop_cursor, video_norm_to_screen(crop_first_corner, dim), dim.w / dim.h)
         else
             corner = crop_cursor
         end
-    elseif opts.mode == "hard" or opts.mode == "delogo" then
+    elseif active_mode == "hard" or active_mode == "delogo" then
         corner = clamp_point({ x = dim.ml, y = dim.mt }, crop_cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
     end
     local corner_video = screen_to_video_norm(corner, dim)
@@ -325,15 +339,23 @@ function cancel_crop()
     mp.unobserve_property(redraw)
     mp.unregister_idle(draw_crop_zone)
     mp.set_osd_ass(1280, 720, '')
+    active = false
 end
 
-function start_crop()
+function start_crop(mode)
+    if active then return end
     if not mp.get_property_native("osd-dimensions") then return end
     local hwdec = mp.get_property("hwdec-current")
     if hwdec and hwdec ~= "no" and not string.find(hwdec, "-copy$") then
         msg.error("Cannot crop with hardware decoding active (see manual)")
         return
     end
+    if mode and not mode_ok(mode) then
+        msg.error("Invalid mode value: " .. mode)
+        return
+    end
+    active = true
+    active_mode = mode or opts.mode
 
     if opts.mouse_support then
         crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
@@ -349,23 +371,33 @@ function start_crop()
     mp.observe_property("osd-dimensions", nil, redraw)
 end
 
-function toggle_crop()
-    if opts.mode == "soft" then return end
-    local filter_name = (opts.mode == "hard") and "crop" or "delogo"
-    local vf_table = mp.get_property_native("vf")
-    if #vf_table > 0 then
-        for i = #vf_table, 1, -1 do
-            if vf_table[i].name == filter_name then
-                for j = i, #vf_table-1 do
-                    vf_table[j] = vf_table[j+1]
+function toggle_crop(mode)
+    if mode and not mode_ok(mode) then
+        msg.error("Invalid mode value: " .. mode)
+    end
+    local toggle_mode = mode or opts.mode
+    if toggle_mode == "soft" then return end -- can't toggle soft mode
+
+    local remove_filter = function()
+        local to_remove = (toggle_mode == "hard") and "crop" or "delogo"
+        local vf_table = mp.get_property_native("vf")
+        if #vf_table > 0 then
+            for i = #vf_table, 1, -1 do
+                if vf_table[i].name == to_remove then
+                    for j = i, #vf_table-1 do
+                        vf_table[j] = vf_table[j+1]
+                    end
+                    vf_table[#vf_table] = nil
+                    mp.set_property_native("vf", vf_table)
+                    return true
                 end
-                vf_table[#vf_table] = nil
-                mp.set_property_native("vf", vf_table)
-                return
             end
         end
+        return false
     end
-    start_crop()
+    if not remove_filter() then
+        start_crop(mode)
+    end
 end
 
 -- bindings
