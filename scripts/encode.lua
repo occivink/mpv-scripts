@@ -148,9 +148,15 @@ function start_encoding(from, to, settings)
     local is_stream = not file_exists(path)
     if is_stream then
         path = mp.get_property("stream-path")
+
         if string.match(path, youtube_regex) then
-          path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", mp.get_property("filename")} }).stdout
-        end
+          video_id = mp.get_property("filename")
+          after_equals = string.match(video_id, "=(.*)")
+          if after_equals then
+            video_id = after_equals
+          end
+          path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", video_id} }).stdout
+      end
     end
 
     local track_args = {}
