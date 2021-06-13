@@ -7,6 +7,9 @@ local ON_WINDOWS = (package.config:sub(1,1) ~= "/")
 local start_timestamp = nil
 local profile_start = ""
 
+-- regex to search if the video is from youtube
+local youtube_regex = "^edl.+new_stream.+http.+googlevideo.+com.+videoplayback"
+
 -- implementation detail of the osd message
 local timer = nil
 local timer_duration = 2
@@ -145,6 +148,9 @@ function start_encoding(from, to, settings)
     local is_stream = not file_exists(path)
     if is_stream then
         path = mp.get_property("stream-path")
+        if string.match(path, youtube_regex) then
+          path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", mp.get_property("filename")} }).stdout
+        end
     end
 
     local track_args = {}
