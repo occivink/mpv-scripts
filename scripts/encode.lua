@@ -155,6 +155,10 @@ function start_encoding(from, to, settings)
           if after_equals then
             video_id = after_equals
           end
+          before_end = string.match(video_id, "(.+)&")
+          if (before_end) then
+            video_id = before_end
+          end
           path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", video_id} }).stdout
       end
     end
