@@ -9,6 +9,7 @@ local profile_start = ""
 
 -- regex to search if the video is from youtube
 local youtube_regex = "^edl.+new_stream.+http.+googlevideo.+com.+videoplayback"
+local youtube_extract_id_regex = {"(.+)&", "v=(.*)", "(.+).t.[0-9]*"}
 
 -- implementation detail of the osd message
 local timer = nil
@@ -151,13 +152,13 @@ function start_encoding(from, to, settings)
 
         if string.match(path, youtube_regex) then
           video_id = mp.get_property("filename")
-          after_equals = string.match(video_id, "=(.*)")
-          if after_equals then
-            video_id = after_equals
-          end
-          before_end = string.match(video_id, "(.+)&")
-          if (before_end) then
-            video_id = before_end
+          for _, regex in ipairs(youtube_extract_id_regex) do
+            video_tmp = string.match(video_id, regex)
+            if video_tmp then
+              mp.msg.warn(video_id)
+              video_id = video_tmp
+              mp.msg.warn(video_id)
+            end
           end
           path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", video_id} }).stdout
       end
