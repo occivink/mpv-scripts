@@ -212,6 +212,11 @@ function start_encoding(from, to, settings)
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
     local input_name = mp.get_property("filename/no-ext") or "encode"
+
+    if is_stream and string.match(mp.get_property("stream-path"), youtube_regex) then
+      input_name = mp.get_property("media-title")
+    end
+
     local title = mp.get_property("media-title")
     local extension = get_extension(path)
     local output_name = get_output_string(output_directory, settings.output_format, input_name, extension, title, from, to, settings.profile)
