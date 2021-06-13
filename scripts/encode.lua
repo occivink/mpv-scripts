@@ -155,9 +155,7 @@ function start_encoding(from, to, settings)
           for _, regex in ipairs(youtube_extract_id_regex) do
             video_tmp = string.match(video_id, regex)
             if video_tmp then
-              mp.msg.warn(video_id)
               video_id = video_tmp
-              mp.msg.warn(video_id)
             end
           end
           path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", video_id} }).stdout
