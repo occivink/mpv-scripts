@@ -345,17 +345,20 @@ end
 function start_crop(mode)
     if active then return end
     if not mp.get_property_native("osd-dimensions") then return end
-    local hwdec = mp.get_property("hwdec-current")
-    if hwdec and hwdec ~= "no" and not string.find(hwdec, "-copy$") then
-        msg.error("Cannot crop with hardware decoding active (see manual)")
-        return
-    end
     if mode and not mode_ok(mode) then
         msg.error("Invalid mode value: " .. mode)
         return
     end
+    local mode_maybe = mode or opts.mode
+    if mode_maybe ~= 'soft' then
+        local hwdec = mp.get_property("hwdec-current")
+        if hwdec and hwdec ~= "no" and not string.find(hwdec, "-copy$") then
+            msg.error("Cannot crop with hardware decoding active (see manual)")
+            return
+        end
+    end
     active = true
-    active_mode = mode or opts.mode
+    active_mode = mode_maybe
 
     if opts.mouse_support then
         crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
