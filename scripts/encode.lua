@@ -7,6 +7,10 @@ local ON_WINDOWS = (package.config:sub(1,1) ~= "/")
 local start_timestamp = nil
 local profile_start = ""
 
+-- regex to search if the video is from youtube
+local youtube_regex = "^edl.+new_stream.+http.+googlevideo.+com.+videoplayback"
+local youtube_extract_id_regex = {"(.+)&", "v=(.*)", "(.+).t.[0-9]*"}
+
 -- implementation detail of the osd message
 local timer = nil
 local timer_duration = 2
@@ -145,6 +149,17 @@ function start_encoding(from, to, settings)
     local is_stream = not file_exists(path)
     if is_stream then
         path = mp.get_property("stream-path")
+
+        if string.match(path, youtube_regex) then
+          video_id = mp.get_property("filename")
+          for _, regex in ipairs(youtube_extract_id_regex) do
+            video_tmp = string.match(video_id, regex)
+            if video_tmp then
+              video_id = video_tmp
+            end
+          end
+          path = utils.subprocess({ args = {"youtube-dl", "-f", "best", "--get-url", video_id} }).stdout
+      end
     end
 
     local track_args = {}
@@ -197,6 +212,11 @@ function start_encoding(from, to, settings)
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
     local input_name = mp.get_property("filename/no-ext") or "encode"
+
+    if is_stream and string.match(mp.get_property("stream-path"), youtube_regex) then
+      input_name = mp.get_property("media-title")
+    end
+
     local title = mp.get_property("media-title")
     local extension = get_extension(path)
     local output_name = get_output_string(output_directory, settings.output_format, input_name, extension, title, from, to, settings.profile)
