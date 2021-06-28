@@ -9,6 +9,7 @@ local opts = {
     reapply_delay = 0.5,
     watch_later_fix = false,
     only_fullscreen = true,
+    disable_hwdec = true,
 }
 options.read_options(opts)
 
@@ -127,7 +128,14 @@ function toggle()
         active = false
         unset_blur()
         mp.unobserve_property(reset_blur)
+        if opts.disable_hwdec then
+            mp.set_property("hwdec", orig_value_hwdec)
+        end
     else
+        if opts.disable_hwdec then
+            orig_value_hwdec = mp.get_property("hwdec")
+            mp.set_property("hwdec", "no")
+        end
         active = true
         set_blur()
         local properties = { "osd-width", "osd-height", "path", "fullscreen" }
