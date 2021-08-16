@@ -77,6 +77,7 @@ function get_video_filters()
     local filters = {}
     for _, vf in ipairs(mp.get_property_native("vf")) do
         local name = vf["name"]
+        name = string.gsub(name, '^lavfi%-', '')
         local filter
         if name == "crop" then
             local p = vf["params"]
