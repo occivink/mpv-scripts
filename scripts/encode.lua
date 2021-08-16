@@ -50,13 +50,13 @@ function get_output_string(dir, format, input, extension, title, from, to, profi
         files[f] = true
     end
     local output = format
-    output = string.gsub(output, "$f", input)
-    output = string.gsub(output, "$t", title)
-    output = string.gsub(output, "$s", seconds_to_time_string(from, true))
-    output = string.gsub(output, "$e", seconds_to_time_string(to, true))
-    output = string.gsub(output, "$d", seconds_to_time_string(to-from, true))
-    output = string.gsub(output, "$x", extension)
-    output = string.gsub(output, "$p", profile)
+    output = string.gsub(output, "$f", function() return input end)
+    output = string.gsub(output, "$t", function() return title end)
+    output = string.gsub(output, "$s", function() return seconds_to_time_string(from, true) end)
+    output = string.gsub(output, "$e", function() return seconds_to_time_string(to, true) end)
+    output = string.gsub(output, "$d", function() return seconds_to_time_string(to-from, true) end)
+    output = string.gsub(output, "$x", function() return extension end)
+    output = string.gsub(output, "$p", function() return profile end)
     if ON_WINDOWS then
         output = string.gsub(output, "[/\\|<>?:\"*]", "_")
     end
