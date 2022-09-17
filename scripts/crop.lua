@@ -1,7 +1,8 @@
 local opts = {
     mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan. Or a bonus "delogo" mode
     draw_shade = true,
-    shade_opacity = "77",
+    shade_opacity = "44",
+    light_opacity = "CC",
     draw_frame = false,
     frame_border_width = 2,
     frame_border_color = "EEEEEE",
@@ -111,14 +112,14 @@ function position_to_ensure_ratio(moving, fixed, ratio)
     }
 end
 
-function draw_shade(ass, unshaded, window)
+function draw_shade(ass, unshaded, window, color, opacity)
     ass:new_event()
     ass:pos(0, 0)
     ass:append("{\\an7}")
     ass:append("{\\bord0}")
     ass:append("{\\shad0}")
-    ass:append("{\\c&H000000&}")
-    ass:append("{\\1a&H" .. opts.shade_opacity .. "}")
+    ass:append("{\\c&H" .. color .. "&}")
+    ass:append("{\\1a&H" .. opacity .. "}")
     ass:append("{\\2a&HFF}")
     ass:append("{\\3a&HFF}")
     ass:append("{\\4a&HFF}")
@@ -231,7 +232,8 @@ function draw_crop_zone()
                     top_left = { x = 0, y = 0 },
                     bottom_right = { x = dim.w, y = dim.h },
                 }
-                draw_shade(ass, frame, window)
+                if opts.light_opacity:lower() ~= "ff" then draw_shade(ass, frame, window, "FFFFFF", opts.light_opacity) end
+                if opts.light_opacity:lower() ~= "ff" then draw_shade(ass, frame, window, "000000", opts.shade_opacity) end
             end
             if opts.draw_frame then
                 draw_frame(ass, frame)
