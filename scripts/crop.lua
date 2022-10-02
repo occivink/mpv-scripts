@@ -18,6 +18,10 @@ local opts = {
     right_fine = "ALT+RIGHT",
     up_fine = "ALT+UP",
     down_fine = "ALT+DOWN",
+
+    modifier_keepaspect = "CTRL",
+    modifier_centered = "ALT",
+
     accept = "ENTER,MOUSE_BTN0",
     cancel = "ESC",
 }
@@ -404,30 +408,55 @@ function toggle_crop(mode)
 end
 
 -- bindings
-if opts.mouse_support then
-    bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); redraw() end
-end
-for _, key in ipairs(opts.accept) do
-    bindings[key] = update_crop_zone_state
-end
-for _, key in ipairs(opts.cancel) do
-    bindings[key] = cancel_crop
-end
-function movement_func(move_x, move_y)
-    return function()
-        crop_cursor.x = crop_cursor.x + move_x
-        crop_cursor.y = crop_cursor.y + move_y
-        redraw()
+do
+    local modifier_dependent_binding = function(centered, keepaspect)
+        if centered and opts.modifier_centered == '' then return end
+        if keepaspect and opts.modifier_keepaspect == '' then return end
+        local binding_modifier = string.format("%s%s",
+            centered and (opts.modifier_centered .. '+') or '' ,
+            keepaspect and (opts.modifier_keepaspect .. '+') or '')
+
+        if opts.mouse_support then
+            bindings[binding_modifier .. 'MOUSE_MOVE'] = function()
+                crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
+                rect_centered = centered
+                rect_keepaspect = keepaspect
+                redraw()
+            end
+        end
+        for _, key in ipairs(opts.accept) do
+            bindings[binding_modifier .. key] = function()
+                rect_centered = centered
+                rect_keepaspect = keepaspect
+                update_crop_zone_state()
+            end
+        end
     end
+    modifier_dependent_binding(false, false);
+    modifier_dependent_binding(false, true);
+    modifier_dependent_binding(true, false);
+    modifier_dependent_binding(true, true);
+
+    for _, key in ipairs(opts.cancel) do
+        bindings[key] = cancel_crop
+    end
+
+    local movement_func = function(move_x, move_y)
+        return function()
+            crop_cursor.x = crop_cursor.x + move_x
+            crop_cursor.y = crop_cursor.y + move_y
+            redraw()
+        end
+    end
+    bindings_repeat[opts.left_coarse]  = movement_func(-opts.coarse_movement, 0)
+    bindings_repeat[opts.right_coarse] = movement_func(opts.coarse_movement, 0)
+    bindings_repeat[opts.up_coarse]    = movement_func(0, -opts.coarse_movement)
+    bindings_repeat[opts.down_coarse]  = movement_func(0, opts.coarse_movement)
+    bindings_repeat[opts.left_fine]    = movement_func(-opts.fine_movement, 0)
+    bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
+    bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
+    bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
 end
-bindings_repeat[opts.left_coarse]  = movement_func(-opts.coarse_movement, 0)
-bindings_repeat[opts.right_coarse] = movement_func(opts.coarse_movement, 0)
-bindings_repeat[opts.up_coarse]    = movement_func(0, -opts.coarse_movement)
-bindings_repeat[opts.down_coarse]  = movement_func(0, opts.coarse_movement)
-bindings_repeat[opts.left_fine]    = movement_func(-opts.fine_movement, 0)
-bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
-bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
-bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
 
 
 mp.add_key_binding(nil, "start-crop", start_crop)
