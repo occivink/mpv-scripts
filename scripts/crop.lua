@@ -45,6 +45,8 @@ end
 local assdraw = require 'mp.assdraw'
 local active = false
 local active_mode = "" -- same possible values as opts.mode
+local rect_centered = false
+local rect_keepaspect = false
 local needs_drawing = false
 local crop_first_corner = nil -- in normalized video space
 local crop_cursor = {
@@ -56,11 +58,28 @@ function redraw()
     needs_drawing = true
 end
 
-function sort_corners(c1, c2)
-    local r1, r2 = {}, {}
-    if c1.x < c2.x then r1.x, r2.x = c1.x, c2.x else r1.x, r2.x = c2.x, c1.x end
-    if c1.y < c2.y then r1.y, r2.y = c1.y, c2.y else r1.y, r2.y = c2.y, c1.y end
-    return r1, r2
+function rect_from_two_points(p1, p2, centered, ratio)
+    local c1 = {p1.x, p1.y}
+    local c2 = {p2.x, p2.y}
+    if ratio then
+        -- adjust position of p2, such
+        if math.abs(c2[1] - c1[1]) < ratio * math.abs(c2[2] - c1[2]) then
+            local is_left = c2[1] < c1[1] and -1 or 1
+            c2[1] = c1[1] + is_left * math.abs(c2[2] - c1[2]) * ratio
+        else
+            local is_up = c2[2] < c1[2] and -1 or 1
+            c2[2] = c1[2] + is_up * math.abs(c2[1] - c1[1]) / ratio
+        end
+    end
+    if centered then
+        -- p1 is center => convert it into corner
+        c1[1] = c1[1] - (c2[1] - c1[1])
+        c1[2] = c1[2] - (c2[2] - c1[2])
+    end
+    -- sort corners
+    if c1[1] > c2[1] then c1[1], c2[1] = c2[1], c1[1] end
+    if c1[2] > c2[2] then c1[2], c2[2] = c2[2], c1[2] end
+    return { x = c1[1], y = c1[2] }, { x = c2[1], y = c2[2] }
 end
 
 function clamp(low, value, high)
@@ -91,23 +110,6 @@ function video_norm_to_screen(point, dim)
     return {
         x = math.floor(point.x * (dim.w - dim.ml - dim.mr) + dim.ml + 0.5),
         y = math.floor(point.y * (dim.h - dim.mt - dim.mb) + dim.mt + 0.5)
-    }
-end
-
-function position_to_ensure_ratio(moving, fixed, ratio)
-    -- corners are in screen coordinates
-    local x = moving.x
-    local y = moving.y
-    if math.abs(x - fixed.x) < ratio * math.abs(y - fixed.y) then
-        local is_left = x < fixed.x and -1 or 1
-        x = fixed.x + is_left * math.abs(y - fixed.y) * ratio
-    else
-        local is_up = y < fixed.y and -1 or 1
-        y = fixed.y + is_up * math.abs(x - fixed.x) / ratio
-    end
-    return {
-        x = x,
-        y = y,
     }
 end
 
@@ -212,19 +214,15 @@ function draw_crop_zone()
             x = crop_cursor.x,
             y = crop_cursor.y,
         }
-        if active_mode == "soft" then
-            if crop_first_corner then
-                cursor = position_to_ensure_ratio(cursor, video_norm_to_screen(crop_first_corner, dim), dim.w / dim.h)
-            end
-        elseif active_mode == "hard" or active_mode == "delogo" then
-            cursor = clamp_point({ x = dim.ml, y = dim.mt }, cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
-        end
         local ass = assdraw.ass_new()
 
         if crop_first_corner and (opts.draw_shade or opts.draw_frame) then
-            local first_corner = video_norm_to_screen(crop_first_corner, dim)
             local frame = {}
-            frame.top_left, frame.bottom_right = sort_corners(first_corner, cursor)
+            frame.top_left, frame.bottom_right = rect_from_two_points(
+                video_norm_to_screen(crop_first_corner, dim),
+                cursor,
+                rect_centered,
+                rect_keepaspect and dim.w/dim.h)
             -- don't draw shade over non-visible video parts
             if opts.draw_shade then
                 local window = {
@@ -263,24 +261,30 @@ function draw_crop_zone()
     end
 end
 
-function crop_video(x, y, w, h, dim)
+function crop_video(x1, y1, x2, y2)
     if active_mode == "soft" then
+        local w = x2 - x1
+        local h = y2 - y1
         local dim = mp.get_property_native("osd-dimensions")
         if not dim then return end
 
         local zoom = mp.get_property_number("video-zoom")
-        local newZoom2 = math.log(dim.w * (2 ^ zoom) / (dim.w - dim.ml - dim.mr) / w) / math.log(2)
         local newZoom1 = math.log(dim.h * (2 ^ zoom) / (dim.h - dim.mt - dim.mb) / h) / math.log(2)
-        mp.set_property("video-zoom", (newZoom1 + newZoom2) / 2) -- they should be ~ the same, but let's not play favorites
-        mp.set_property("video-pan-x", 0.5 - (x + w / 2))
-        mp.set_property("video-pan-y", 0.5 - (y + h / 2))
+        local newZoom2 = math.log(dim.w * (2 ^ zoom) / (dim.w - dim.ml - dim.mr) / w) / math.log(2)
+        mp.set_property("video-zoom", math.min(newZoom1, newZoom2))
+        mp.set_property("video-pan-x", 0.5 - (x1 + w / 2))
+        mp.set_property("video-pan-y", 0.5 - (y1 + h / 2))
     elseif active_mode == "hard" or active_mode == "delogo" then
+        x1 = clamp(0, x1, 1)
+        y1 = clamp(0, y1, 1)
+        x2 = clamp(0, x2, 1)
+        y2 = clamp(0, y2, 1)
         local vop = mp.get_property_native("video-out-params")
         local vf_table = mp.get_property_native("vf")
-        local x = math.floor(x * vop.w)
-        local y = math.floor(y * vop.h)
-        local w = math.floor(w * vop.w)
-        local h = math.floor(h * vop.h)
+        local x = math.floor(x1 * vop.w + 0.5)
+        local y = math.floor(y1 * vop.h + 0.5)
+        local w = math.floor((x2 - x1) * vop.w + 0.5)
+        local h = math.floor((y2 - y1) * vop.h + 0.5)
         if active_mode == "delogo" then
             -- delogo is a little special and needs some padding to function
             w = math.min(vop.w - 1, w)
@@ -304,23 +308,19 @@ function update_crop_zone_state()
         cancel_crop()
         return
     end
-    local corner
-    if active_mode == "soft" then
-        if crop_first_corner then
-            corner = position_to_ensure_ratio(crop_cursor, video_norm_to_screen(crop_first_corner, dim), dim.w / dim.h)
-        else
-            corner = crop_cursor
-        end
-    elseif active_mode == "hard" or active_mode == "delogo" then
-        corner = clamp_point({ x = dim.ml, y = dim.mt }, crop_cursor, { x = dim.w - dim.mr, y = dim.h - dim.mb })
-    end
-    local corner_video = screen_to_video_norm(corner, dim)
+    local corner = crop_cursor
     if crop_first_corner == nil then
-        crop_first_corner = corner_video
+        crop_first_corner = screen_to_video_norm(crop_cursor, dim)
         redraw()
     else
-        local c1, c2 = sort_corners(crop_first_corner, corner_video)
-        crop_video(c1.x, c1.y, c2.x - c1.x, c2.y - c1.y)
+        local c1, c2 = rect_from_two_points(
+            video_norm_to_screen(crop_first_corner, dim),
+            crop_cursor,
+            rect_centered,
+            rect_keepaspect and dim.w/dim.h)
+        local c1norm = screen_to_video_norm(c1, dim)
+        local c2norm = screen_to_video_norm(c2, dim)
+        crop_video(c1norm.x, c1norm.y, c2norm.x, c2norm.y)
         cancel_crop()
     end
 end
