@@ -49,7 +49,7 @@ local rect_centered = false
 local rect_keepaspect = false
 local needs_drawing = false
 local crop_first_corner = nil -- in normalized video space
-local crop_cursor = {
+local cursor = {
     x = 0,
     y = 0
 }
@@ -82,6 +82,11 @@ function rect_from_two_points(p1, p2, centered, ratio)
     return { x = c1[1], y = c1[2] }, { x = c2[1], y = c2[2] }
 end
 
+function round(num, num_decimal_places)
+    local mult = 10^(num_decimal_places or 0)
+    return math.floor(num * mult + 0.5) / mult
+end
+
 function clamp(low, value, high)
     if value <= low then
         return low
@@ -92,10 +97,10 @@ function clamp(low, value, high)
     end
 end
 
-function clamp_point(top_left, point, bottom_right)
+function clamp_point(point, dim)
     return {
-        x = clamp(top_left.x, point.x, bottom_right.x),
-        y = clamp(top_left.y, point.y, bottom_right.y)
+        x = clamp(dim.ml, point.x, dim.w - dim.mr),
+        y = clamp(dim.mt, point.y, dim.h - dim.mb)
     }
 end
 
@@ -210,10 +215,7 @@ function draw_crop_zone()
             return
         end
 
-        local cursor = {
-            x = crop_cursor.x,
-            y = crop_cursor.y,
-        }
+        cursor = clamp_point(cursor, dim)
         local ass = assdraw.ass_new()
 
         if crop_first_corner and (opts.draw_shade or opts.draw_frame) then
@@ -247,9 +249,13 @@ function draw_crop_zone()
                 local cursor_norm = screen_to_video_norm(cursor, dim)
                 local text = string.format("%d, %d", cursor_norm.x * vop.w, cursor_norm.y * vop.h)
                 if crop_first_corner then
-                    text = string.format("%s (%dx%d)", text,
-                        math.abs((cursor_norm.x - crop_first_corner.x) * vop.w ),
-                        math.abs((cursor_norm.y - crop_first_corner.y) * vop.h )
+                    local crop_zone_w = math.abs((cursor_norm.x - crop_first_corner.x) * vop.w )
+                    local crop_zone_h = math.abs((cursor_norm.y - crop_first_corner.y) * vop.h )
+                    local crop_zone_aspect = round(crop_zone_w / crop_zone_h, 3)
+                    text = string.format("%s (%dx%d/%s)", text,
+                        crop_zone_w,
+                        crop_zone_h,
+                        crop_zone_aspect
                     )
                 end
                 draw_position_text(ass, text, cursor, { w = dim.w, h = dim.h }, 6)
@@ -308,14 +314,13 @@ function update_crop_zone_state()
         cancel_crop()
         return
     end
-    local corner = crop_cursor
     if crop_first_corner == nil then
-        crop_first_corner = screen_to_video_norm(crop_cursor, dim)
+        crop_first_corner = screen_to_video_norm(cursor, dim)
         redraw()
     else
         local c1, c2 = rect_from_two_points(
             video_norm_to_screen(crop_first_corner, dim),
-            crop_cursor,
+            cursor,
             rect_centered,
             rect_keepaspect and dim.w/dim.h)
         local c1norm = screen_to_video_norm(c1, dim)
@@ -361,7 +366,7 @@ function start_crop(mode)
     active_mode = mode_maybe
 
     if opts.mouse_support then
-        crop_cursor.x, crop_cursor.y = mp.get_mouse_pos()
+        cursor.x, cursor.y = mp.get_mouse_pos()
     end
     redraw()
     for key, func in pairs(bindings) do
@@ -405,7 +410,7 @@ end
 
 -- bindings
 if opts.mouse_support then
-    bindings["MOUSE_MOVE"] = function() crop_cursor.x, crop_cursor.y = mp.get_mouse_pos(); redraw() end
+    bindings["MOUSE_MOVE"] = function() cursor.x, cursor.y = mp.get_mouse_pos(); redraw() end
 end
 for _, key in ipairs(opts.accept) do
     bindings[key] = update_crop_zone_state
@@ -415,8 +420,8 @@ for _, key in ipairs(opts.cancel) do
 end
 function movement_func(move_x, move_y)
     return function()
-        crop_cursor.x = crop_cursor.x + move_x
-        crop_cursor.y = crop_cursor.y + move_y
+        cursor.x = cursor.x + move_x
+        cursor.y = cursor.y + move_y
         redraw()
     end
 end
