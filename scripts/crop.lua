@@ -314,6 +314,7 @@ function update_crop_zone_state()
         cancel_crop()
         return
     end
+    cursor = clamp_point(cursor, dim)
     if crop_first_corner == nil then
         crop_first_corner = screen_to_video_norm(cursor, dim)
         redraw()
