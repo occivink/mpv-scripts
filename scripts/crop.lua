@@ -8,6 +8,7 @@ local opts = {
     draw_crosshair = true,
     draw_text = true,
     mouse_support = true,
+    fix_borders = true,
     coarse_movement = 30,
     left_coarse = "LEFT",
     right_coarse = "RIGHT",
@@ -299,6 +300,11 @@ function crop_video(x1, y1, x2, y2)
             params= { x = tostring(x), y = tostring(y), w = tostring(w), h = tostring(h) }
         }
         mp.set_property_native("vf", vf_table)
+        local subdata = mp.get_property_native("sub-ass-extradata")
+        if subdata ~= nil and opts.fix_borders then
+            local playresy = subdata:match("PlayResY:%s*(%d+)")
+            mp.set_property_native("sub-ass-force-style", "PlayResX=" .. tostring(tonumber(playresy) * (w/h)))
+        end
     end
 end
 
@@ -392,6 +398,11 @@ function toggle_crop(mode)
                     end
                     vf_table[#vf_table] = nil
                     mp.set_property_native("vf", vf_table)
+                    local subdata = mp.get_property_native("sub-ass-extradata")
+                    if subdata ~= nil and opts.fix_borders then
+                        local playresx = subdata:match("PlayResX:%s*(%d+)")
+                        mp.set_property_native("sub-ass-force-style", "PlayResX=" .. playresx)
+                    end
                     return true
                 end
             end
