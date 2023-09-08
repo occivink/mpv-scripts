@@ -11,6 +11,15 @@ local profile_start = ""
 local timer = nil
 local timer_duration = 2
 
+-- regex that detects, if a stream path is from youtube
+local youtube_regex_streampath = "^edl.+new_stream.+http.+googlevideo.+com.+videoplayback"
+-- multiple regexes to extract the youtube video ID from the path property
+local youtube_regex_id = {"([a-zA-Z0-9]+)&", "v=([a-zA-Z0-9]*)", "([a-zA-Z0-9]+)"}
+-- allowed characters in the output filename
+local youtube_filename_regex = "[a-zA-Z0-9%.() ]"
+-- default filename, if there is no allowed char in the file name
+local youtube_filename_fallback = "youtube-clip"
+
 function append_table(lhs, rhs)
     for i = 1,#rhs do
         lhs[#lhs+1] = rhs[i]
@@ -136,16 +145,27 @@ function seconds_to_time_string(seconds, full)
 end
 
 function start_encoding(from, to, settings)
-    local args = {
+    local youtube_video_id = nil
+    local input_args = {
         settings.ffmpeg_command,
         "-loglevel", "panic", "-hide_banner",
     }
-    local append_args = function(table) args = append_table(args, table) end
+    local append_args = function(table) input_args = append_table(input_args, table) end
 
     local path = mp.get_property("path")
     local is_stream = not file_exists(path)
     if is_stream then
         path = mp.get_property("stream-path")
+        if string.match(path, youtube_regex_streampath) then
+            for _, regex in ipairs(youtube_regex_id) do
+                filename = mp.get_property("filename")
+                tmp = string.match(filename, regex)
+                if tmp then
+                    youtube_video_id = tmp
+                    break
+                end
+            end
+        end
     end
 
     local track_args = {}
@@ -154,20 +174,28 @@ function start_encoding(from, to, settings)
     for input_path, tracks in pairs(get_input_info(path, settings.only_active_tracks)) do
        append_args({
             "-ss", start,
-            "-i", input_path,
         })
-        if settings.only_active_tracks then
-            for _, track_index in ipairs(tracks) do
-                track_args = append_table(track_args, { "-map", string.format("%d:%d", input_index, track_index)})
+        -- we don't want the EDL string in the table, if it's a youtube video
+        if not youtube_video_id then
+            append_args({
+                "-i", input_path,
+            })
+            if settings.only_active_tracks then
+                for _, track_index in ipairs(tracks) do
+                    track_args = append_table(track_args, { "-map", string.format("%d:%d", input_index, track_index)})
+                end
+            else
+                track_args = append_table(track_args, { "-map", tostring(input_index)})
             end
-        else
-            track_args = append_table(track_args, { "-map", tostring(input_index)})
         end
         input_index = input_index + 1
     end
 
     append_args({"-to", tostring(to-from)})
     append_args(track_args)
+
+    local output_args = {}
+    local append_args = function(table) args = append_table(args, table) end
 
     -- apply some of the video filters currently in the chain
     local filters = {}
@@ -183,7 +211,7 @@ function start_encoding(from, to, settings)
 
     -- split the user-passed settings on whitespace
     for token in string.gmatch(settings.codec, "[^%s]+") do
-        args[#args + 1] = token
+        output_args[#output_args + 1] = token
     end
 
     -- path of the output
@@ -197,7 +225,12 @@ function start_encoding(from, to, settings)
     else
         output_directory = string.gsub(output_directory, "^~", os.getenv("HOME") or "~")
     end
-    local input_name = mp.get_property("filename/no-ext") or "encode"
+    local input_name
+    if youtube_video_id then
+        input_name = sanitize_filename(mp.get_property("media-title"))
+    else
+        input_name = mp.get_property("filename/no-ext") or "encode"
+    end
     local title = mp.get_property("media-title")
     local extension = get_extension(path)
     local output_name = get_output_string(output_directory, settings.output_format, input_name, extension, title, from, to, settings.profile)
@@ -205,23 +238,71 @@ function start_encoding(from, to, settings)
         mp.osd_message("Invalid path " .. output_directory)
         return
     end
-    args[#args + 1] = utils.join_path(output_directory, output_name)
+
+    local args = {}
+
+    if youtube_video_id then
+        table.remove(input_args, 1)
+
+        local ffmpeg_input_collapsed = "ffmpeg_i:"
+        for _, val in ipairs(input_args) do
+            ffmpeg_input_collapsed = ffmpeg_input_collapsed .. val .. " "
+        end
+
+        local ffmpeg_output_collapsed = "ffmpeg_o:"
+        for _, val in ipairs(output_args) do
+            ffmpeg_output_collapsed = ffmpeg_output_collapsed .. val .. " "
+        end
+
+        args = {
+            settings.yt_dlp_command,
+            youtube_video_id,
+            "--external-downloader",
+            settings.ffmpeg_command,
+            "--external-downloader-args",
+            ffmpeg_input_collapsed:sub(1, -2),
+            "--external-downloader-args",
+            ffmpeg_output_collapsed:sub(1, -2),
+            "-o",
+            output_name,
+        }
+    else
+        -- merge input and output arguments
+        for _, v in ipairs(input_args) do
+            table.insert(args, v)
+        end
+        for _, v in ipairs(output_args) do
+            table.insert(args, v)
+        end
+        args[#args + 1] = utils.join_path(output_directory, output_name)
+    end
 
     if settings.print then
         local o = ""
         -- fuck this is ugly
-        for i = 1, #args do
-            local fmt = ""
-            if i == 1 then
-                fmt = "%s%s"
-            elseif i >= 2 and i <= 4 then
-                fmt = "%s"
-            elseif args[i-1] == "-i" or i == #args or args[i-1] == "-filter:v" then
-                fmt = "%s '%s'"
-            else
-                fmt = "%s %s"
+        if not youtube_video_id then
+            for i = 1, #args do
+                local fmt = ""
+                if i == 1 then
+                    fmt = "%s%s"
+                elseif i >= 2 and i <= 4 then
+                    fmt = "%s"
+                elseif args[i-1] == "-i" or i == #args or args[i-1] == "-filter:v" then
+                    fmt = "%s '%s'"
+                else
+                    fmt = "%s %s"
+                end
+                o = string.format(fmt, o, args[i])
             end
-            o = string.format(fmt, o, args[i])
+        else
+            -- this is ugly too and relies on the download format not changing...
+            for i, val in ipairs(args) do
+                if i == 6 or i == 8 then
+                    o = o .. "'" .. val .. "' "
+                else
+                    o = o .. val .. " "
+                end
+            end
         end
         print(o)
     end
@@ -297,6 +378,7 @@ function set_timestamp(profile)
             output_directory = "",
             ffmpeg_command = "ffmpeg",
             print = true,
+            yt_dlp_command = "yt-dlp",
         }
         if profile then
             options.read_options(settings, profile)
@@ -310,6 +392,19 @@ function set_timestamp(profile)
         end
         start_encoding(from, to, settings)
     end
+end
+
+function sanitize_filename(raw)
+    str = ""
+    for allowed in string.gmatch(raw, youtube_filename_regex) do
+        if not (allowed == "") then
+            str = str .. allowed
+        end
+    end
+    if str == "" then
+        return filename_default
+    end
+    return str
 end
 
 mp.add_key_binding(nil, "set-timestamp", set_timestamp)
