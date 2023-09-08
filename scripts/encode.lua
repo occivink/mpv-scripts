@@ -191,7 +191,7 @@ function start_encoding(from, to, settings)
         input_index = input_index + 1
     end
 
-    append_args({"-to", tostring(to-from)})
+    append_args({"-t", tostring(to-from)})
     append_args(track_args)
 
     local output_args = {}
