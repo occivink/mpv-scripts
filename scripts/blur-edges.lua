@@ -38,7 +38,7 @@ function set_blur()
     if applied then return end
     if not mp.get_property("video-out-params") then return end
     if opts.only_fullscreen and not mp.get_property_bool("fullscreen") then return end
-    local video_aspect = mp.get_property_number("video-aspect")
+    local video_aspect = mp.get_property_number("video-aspect-override")
     local ww, wh = mp.get_osd_size()
 
     if math.abs(ww/wh - video_aspect) < 0.05 then return end
