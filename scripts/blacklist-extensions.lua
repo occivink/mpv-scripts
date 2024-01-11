@@ -69,7 +69,7 @@ function process(playlist_count)
         end
     end
     if removed == #playlist then
-        msg.warn("Removed eveything from the playlist")
+        msg.warn("Removed everything from the playlist")
     end
 end
 
