@@ -342,6 +342,30 @@ function cancel_crop()
     active = false
 end
 
+function remove_last_filter()
+    local vf_table = mp.get_property_native("vf")
+    local crop_filter_count = 0
+    local remove_last = 0
+
+    -- count filters
+    for i = 1, #vf_table do
+        if vf_table[i].name == "crop" or vf_table[i].name == "delogo" then
+            crop_filter_count = crop_filter_count + 1
+            remove_last = i
+            removed_filter_name = vf_table[i].name
+        end
+    end
+
+    -- remove last filter
+    if crop_filter_count > 0 then
+        table.remove(vf_table, remove_last)
+        mp.set_property_native("vf", vf_table)
+        mp.osd_message("Removed filter: #" .. tostring(crop_filter_count) .. " " .. removed_filter_name)
+    else
+        mp.osd_message("No filters to remove")
+    end
+end
+
 function start_crop(mode)
     if active then return end
     if not mp.get_property_native("osd-dimensions") then return end
@@ -429,6 +453,6 @@ bindings_repeat[opts.right_fine]   = movement_func(opts.fine_movement, 0)
 bindings_repeat[opts.up_fine]      = movement_func(0, -opts.fine_movement)
 bindings_repeat[opts.down_fine]    = movement_func(0, opts.fine_movement)
 
-
+mp.add_key_binding(nil, "remove-crop", remove_last_filter)
 mp.add_key_binding(nil, "start-crop", start_crop)
 mp.add_key_binding(nil, "toggle-crop", toggle_crop)
