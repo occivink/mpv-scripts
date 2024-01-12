@@ -1,5 +1,5 @@
 local opts = {
-    mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan. Or a bonus "delogo" mode
+    mode = "hard", -- can be "hard" or "soft". If hard, use video-crop, if soft use zoom + pan. Or a bonus "delogo" mode
     draw_shade = true,
     shade_opacity = "77",
     draw_frame = false,
@@ -280,12 +280,15 @@ function crop_video(x1, y1, x2, y2)
         x2 = clamp(0, x2, 1)
         y2 = clamp(0, y2, 1)
         local vop = mp.get_property_native("video-out-params")
-        local vf_table = mp.get_property_native("vf")
         local x = math.floor(x1 * vop.w + 0.5)
         local y = math.floor(y1 * vop.h + 0.5)
         local w = math.floor((x2 - x1) * vop.w + 0.5)
         local h = math.floor((y2 - y1) * vop.h + 0.5)
-        if active_mode == "delogo" then
+        if active_mode == "hard" then
+            local video_crop = tostring(w) .."x".. tostring(h) .."+".. tostring(x) .."+".. tostring(y)
+            mp.set_property_native("video-crop", video_crop)
+        elseif active_mode == "delogo" then
+            local vf_table = mp.get_property_native("vf")
             -- delogo is a little special and needs some padding to function
             w = math.min(vop.w - 1, w)
             h = math.min(vop.h - 1, h)
@@ -293,12 +296,12 @@ function crop_video(x1, y1, x2, y2)
             y = math.max(1, y)
             if x + w == vop.w then w = w - 1 end
             if y + h == vop.h then h = h - 1 end
+            vf_table[#vf_table + 1] = {
+                name="delogo",
+                params= { x = tostring(x), y = tostring(y), w = tostring(w), h = tostring(h) }
+            }
+            mp.set_property_native("vf", vf_table)
         end
-        vf_table[#vf_table + 1] = {
-            name=(active_mode == "hard") and "crop" or "delogo",
-            params= { x = tostring(x), y = tostring(y), w = tostring(w), h = tostring(h) }
-        }
-        mp.set_property_native("vf", vf_table)
     end
 end
 
@@ -350,7 +353,7 @@ function start_crop(mode)
         return
     end
     local mode_maybe = mode or opts.mode
-    if mode_maybe ~= 'soft' then
+    if mode_maybe == "delogo" then
         local hwdec = mp.get_property("hwdec-current")
         if hwdec and hwdec ~= "no" and not string.find(hwdec, "-copy$") then
             msg.error("Cannot crop with hardware decoding active (see manual)")
@@ -381,12 +384,11 @@ function toggle_crop(mode)
     local toggle_mode = mode or opts.mode
     if toggle_mode == "soft" then return end -- can't toggle soft mode
 
-    local remove_filter = function()
-        local to_remove = (toggle_mode == "hard") and "crop" or "delogo"
+    local remove_delogo = function()
         local vf_table = mp.get_property_native("vf")
         if #vf_table > 0 then
             for i = #vf_table, 1, -1 do
-                if vf_table[i].name == to_remove then
+                if vf_table[i].name == "delogo" then
                     for j = i, #vf_table-1 do
                         vf_table[j] = vf_table[j+1]
                     end
@@ -398,7 +400,18 @@ function toggle_crop(mode)
         end
         return false
     end
-    if not remove_filter() then
+    if toggle_mode == "delogo" and not remove_delogo() then
+        start_crop(mode)
+    end
+    local remove_hard = function()
+        video_crop = mp.get_property_native("video-crop")
+        if video_crop == "" then
+            return false
+        end
+        mp.set_property_native("video-crop", "")
+        return true
+    end
+    if toggle_mode == "hard" and not remove_hard() then
         start_crop(mode)
     end
 end
