@@ -6,6 +6,7 @@ opts = {
 }
 (require 'mp.options').read_options(opts)
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
 function split(input)
     local ret = {}
@@ -46,7 +47,8 @@ function should_remove(filename)
         return false
     end
     local extension = string.match(filename, "%.([^./]+)$")
-    if not extension and opts.remove_files_without_extension then
+    if not extension and opts.remove_files_without_extension
+    and not utils.file_info(filename).is_dir then
         return true
     end
     if extension and exclude(string.lower(extension)) then
