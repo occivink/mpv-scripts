@@ -6,6 +6,7 @@ opts = {
 }
 (require 'mp.options').read_options(opts)
 local msg = require 'mp.msg'
+local utils = require 'mp.utils'
 
 function split(input)
     local ret = {}
@@ -42,9 +43,13 @@ else
 end
 
 function should_remove(filename)
-    if string.find(filename, "://") then
+
+    -- don't remove playlist entry if it's a stream or directory
+    local file = utils.file_info(filename)
+    if not file or file.is_dir then
         return false
     end
+    
     local extension = string.match(filename, "%.([^./]+)$")
     if not extension and opts.remove_files_without_extension then
         return true
