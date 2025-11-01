@@ -8,6 +8,7 @@ local opts = {
     frame_border_color = "EEEEEE",
     draw_crosshair = true,
     draw_text = true,
+    draw_text_dar = false,
     mouse_support = true,
     coarse_movement = 30,
     left_coarse = "LEFT",
@@ -252,10 +253,16 @@ function draw_crop_zone()
                 local cursor_norm = screen_to_video_norm(cursor, dim)
                 local text = string.format("%d, %d", cursor_norm.x * vop.w, cursor_norm.y * vop.h)
                 if crop_first_corner then
+                    local crop_zone_w = math.abs((cursor_norm.x - crop_first_corner.x) * vop.w )
+                    local crop_zone_h = math.abs((cursor_norm.y - crop_first_corner.y) * vop.h )
                     text = string.format("%s (%dx%d)", text,
-                        math.abs((cursor_norm.x - crop_first_corner.x) * vop.w ),
-                        math.abs((cursor_norm.y - crop_first_corner.y) * vop.h )
+                        crop_zone_w,
+                        crop_zone_h
                     )
+                    if opts.draw_text_dar then
+                        local crop_zone_dar = crop_zone_w / crop_zone_h * (vop.par or 1)
+                        text = string.format("%s DAR: %.3f", text, crop_zone_dar)
+                    end
                 end
                 draw_position_text(ass, text, cursor, { w = dim.w, h = dim.h }, 6)
             end
