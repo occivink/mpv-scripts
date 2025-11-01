@@ -1,5 +1,6 @@
 local opts = {
     mode = "hard", -- can be "hard" or "soft". If hard, apply a crop filter, if soft zoom + pan. Or a bonus "delogo" mode
+    video_area_only = false,
     draw_shade = true,
     shade_opacity = "77",
     draw_frame = false,
@@ -214,6 +215,10 @@ function draw_crop_zone()
             x = crop_cursor.x,
             y = crop_cursor.y,
         }
+        if opts.video_area_only then
+            cursor.x = clamp(dim.ml, cursor.x, dim.w - dim.mr)
+            cursor.y = clamp(dim.mt, cursor.y, dim.h - dim.mb)
+        end
         local ass = assdraw.ass_new()
 
         if crop_first_corner and (opts.draw_shade or opts.draw_frame) then
@@ -309,6 +314,10 @@ function update_crop_zone_state()
         return
     end
     local corner = crop_cursor
+    if opts.video_area_only then
+        crop_cursor.x = clamp(dim.ml, crop_cursor.x, dim.w - dim.mr)
+        crop_cursor.y = clamp(dim.mt, crop_cursor.y, dim.h - dim.mb)
+    end
     if crop_first_corner == nil then
         crop_first_corner = screen_to_video_norm(crop_cursor, dim)
         redraw()
